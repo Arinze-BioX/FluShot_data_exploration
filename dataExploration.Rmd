@@ -1,0 +1,101 @@
+---
+title: "Data Exploration"
+author: "Lucy Chikwetu"
+date: "9/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(tidyquant)
+library(ggplot2)
+library(lubridate)
+library(patchwork)
+library(gridExtra)
+library(corrplot)
+library(psych)
+library(DescTools)
+```
+## Reading the data 
+```{r}
+subFormat = read.csv("submission_format.csv", header = TRUE)
+testFeatures = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trainingFeatures = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trainingLabels = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+```
+### Number of Rows
+```{r}
+nrow(subFormat)
+nrow(testFeatures)
+nrow(trainingFeatures)
+nrow(trainingLabels)
+```
+### Number of Columns 
+```{r}
+ncol(subFormat)
+ncol(testFeatures)
+ncol(trainingFeatures)
+ncol(trainingLabels)
+```
+
+
+### Head Viewing 
+* <span style="color:blue">Submission Format</span>
+```{r}
+head(subFormat)
+```
+* <span style="color:blue">Test Set Features</span>
+```{r}
+head(testFeatures)
+```
+* <span style="color:blue">Training Set Features</span>
+```{r}
+head(trainingFeatures)
+```
+* <span style="color:blue">Submission Format</span>
+```{r}
+head(trainingLabels)
+```
+
+### Summaries
+* <span style="color:blue">Test Set Features</span>
+```{r}
+summary(testFeatures)
+```
+
+* <span style="color:blue">Training Set Features</span>
+```{r}
+summary(trainingFeatures)
+```
+### Training Feature Plots 
+```{r fig.align='center'}
+p1 <- ggplot(trainingFeatures, aes(trainingFeatures$h1n1_concern)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of H1N1 concern count") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1N1 concern")
+p2 <- ggplot(trainingFeatures, aes(trainingFeatures$h1n1_knowledge)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of H1N1 knowledge count") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1NI knowledge")
+p3 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_antiviral_meds)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral antiviral meds count") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Antiviral Meds")
+p4 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_avoidance)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral avoidance count") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Avoidance")
+p4 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_face_mask)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral face mask count") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Face Mask")
+(p1 + p2) / (p3 + p4)
+```
+
