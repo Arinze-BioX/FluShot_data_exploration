@@ -1,0 +1,205 @@
+---
+title: "Exploratory_Analysis_Nick"
+author: "Nicholas Garside"
+date: "9/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Libraries:
+```{r message = false}
+library(corrplot)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+# Exploratory Analysis
+
+
+```{r}
+data <- read.csv("training_set_features.csv", header = TRUE, stringsAsFactors = TRUE)
+vac_df <- data.frame(data)
+
+data_lab <- read.csv("training_set_labels.csv", header = TRUE)
+vac_df_lab <- data.frame(data_lab)
+```
+
+Merge into one dataframe:
+```{r}
+vac_df$h1n1_vaccine <- as.numeric(vac_df_lab$h1n1_vaccine)
+vac_df$seasonal_vaccine <- as.numeric(vac_df_lab$seasonal_vaccine)
+```
+
+Set data types:
+```{r}
+transform(vac_df, respondent_id = as.factor(respondent_id),
+          h1n1_concern = as.integer(h1n1_concern),
+          h1n1_knowledge = as.integer(h1n1_knowledge),
+          behavioral_antiviral_meds = as.logical(behavioral_antiviral_meds),
+          behavioral_avoidance = as.logical(behavioral_avoidance),
+          behavioral_face_mask = as.logical(behavioral_face_mask),
+          behavioral_wash_hands = as.logical(behavioral_wash_hands),
+          behavioral_large_gatherings = as.logical(behavioral_large_gatherings),
+          behavioral_outside_home = as.logical(behavioral_outside_home),
+          behavioral_touch_face = as.logical(behavioral_touch_face),
+          doctor_recc_h1n1 = as.logical(doctor_recc_h1n1),
+          doctor_recc_seasonal = as.logical(doctor_recc_seasonal),
+          chronic_med_condition = as.logical(chronic_med_condition),
+          child_under_6_months = as.logical(child_under_6_months),
+          health_worker = as.logical(health_worker),
+          health_insurance = as.logical(health_insurance),
+          opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
+          opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
+          opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
+          opinion_seas_vacc_effective = as.integer(opinion_seas_vacc_effective),
+          opinion_seas_risk = as.integer(opinion_seas_risk),
+          opinion_seas_sick_from_vacc = as.integer(opinion_seas_sick_from_vacc),
+          age_group = as.factor(age_group),
+          education = as.factor(education),
+          race = as.factor(race),
+          sex = as.factor(sex),
+          income_poverty = as.factor(income_poverty),
+          marital_status = as.factor(marital_status),
+          rent_or_own = as.factor(rent_or_own),
+          employment_status = as.factor(employment_status),
+          hhs_geo_region = as.factor(hhs_geo_region),
+          census_msa = as.factor(census_msa),
+          household_adults = as.integer(household_adults),
+          household_children = as.integer(household_children),
+          employment_industry = as.factor(employment_industry),
+          employment_occupation = as.factor(employment_occupation))
+```
+
+
+Generate Correlation Plot:
+```{r}
+c <- cor(vac_df[, sapply(vac_df, is.numeric)],
+    use = "complete.obs", method = "pearson")
+corrplot(c, tl.cex = 1, type = "upper")
+```
+
+For H1N1 vaccination, highly correlted variables include:
+doctor_recc_h1n1
+opinion_h1n1_vacc_effective
+opinion_h1n1_vacc_risk
+opinion_seas_vacc_risk
+seasonal_vaccine (another output label)
+
+For seasonal flu vaccination, highly correlated variables include:
+doctor_recc_seasonal
+opinion_seas_vacc_effective
+opinion_h1n1_vacc_risk
+opinion_seas_vacc_risk
+h1n1_vaccine (another output label)
+
+Other interesting trends:
+1) High correlations between h1n1 and seas groups of opinion risk, opinion effective, and opinion sick from vacc
+2) Slightly negative correlations for household_adults and household_children with seasonal_vaccine
+
+
+## Summary
+
+```{r}
+vac_df %>% summary()
+```
+
+High-level demographics:
+1) ~46.6% of all observations got the flu shot
+2) ~21.3% of all observations got the h1n1 shot
+3) 2/5 were male, 3/5 were female
+4) Most were white
+5) Tons of missing data for Employment Industry, Employment Occupation, and Health Insurance
+6) ~82% wash hands, while only ~7% wear a face mask
+7) ~5% said yes for antiviral meds
+8) 26707 total observations
+9) ~11% were healthcare workers
+10) Most people ~80% think the vaccines are effective
+11) Most people ~88% had health insurace
+12) 0.5 children per household average (seems low)
+13) About half and half on married vs. unmarried
+
+## Grouped by Factors
+
+```{r}
+by_poverty <- vac_df %>% group_by(income_poverty)
+by_poverty %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_age_group <- vac_df %>% group_by(age_group)
+by_age_group %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_education <- vac_df %>% group_by(education)
+by_education %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_health_worker <- vac_df %>% group_by(health_worker)
+by_health_worker %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_opinion_seas_vacc_effective <- vac_df %>% group_by(opinion_seas_vacc_effective)
+by_opinion_seas_vacc_effective %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_marital <- vac_df %>% group_by(marital_status)
+by_marital %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_antiviral <- vac_df %>% group_by(behavioral_antiviral_meds)
+by_antiviral %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_chronic_condition <- vac_df %>% group_by(chronic_med_condition)
+by_chronic_condition %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_sex <- vac_df %>% group_by(sex)
+by_sex %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_hhs <- vac_df %>% group_by(hhs_geo_region)
+by_hhs %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_rent <- vac_df %>% group_by(rent_or_own)
+by_rent %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_employment_occupation <- vac_df %>% group_by(employment_occupation)
+by_employment_occupation %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_census <- vac_df %>% group_by(census_msa)
+by_census %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+
+by_seasonal_vaccination <- vac_df %>% group_by(seasonal_vaccine)
+by_seasonal_vaccination %>% summarise(seasonal = mean(seasonal_vaccine), h1n1 = mean(h1n1_vaccine))
+```
+
+Interesting Trends:
+1) Increasing rate of vaccination as wealth status increases (both seasonal and h1n1)
+2) Increasing rate of seasonal flu vaccination as age increases (no trend for h1n1)
+3) Increasing rate of vaccination as education levels increase (both seasonal and h1n1)
+4) Nearly 20% higher rate of vaccination if healthcare worker (both seasonal and h1n1)
+5) ~70% vaccination compared to ~15% for favorable versus unfavorable opinions of vaccine effectiveness
+6) Slightly higher (~4%) rate of vaccination if married
+7) Significantly higher rate of vaccination if behavioral_antiviral_meds data is missing (otherwise similar rates)
+8) ~10-20% higher rate of vaccination if person has chronic med condition.
+9) Females ~8% higher rate of seasonal flu vaccination, but no difference for h1n1
+10) No difference among all the hhs_geo_region categories
+11) Significantly higher rate (~50% compared to ~37%) if you own a house rather than rent.
+12) Ranges of vaccinates rates from 35-85% (seasonal), 14-62% (h1n1) depending on occupation
+13) No difference between census_msa catagories
+14) Around 37% of people who DO get the seasonal flu vaccine get the h1n1 vaccine as well.
+15) Around 6% of people who DON'T get the seasonal flu vaccine get the h1n1 vaccine as well.
+
+
+Filling in Missingness for Employment Information:
+```{r}
+vac_df$employment_occupation = as.character(vac_df$employment_occupation)
+vac_df$employment_status = as.character(vac_df$employment_status)
+vac_df$employment_industry = as.character(vac_df$employment_industry)
+vac_df[vac_df$employment_status%in%c("Not in Labor Force","Unemployed")&vac_df$employment_occupation=="",c("employment_occupation", "employment_industry")] <- "Unemployed"
+vac_df$employment_occupation = as.factor(vac_df$employment_occupation)
+vac_df$employment_status = as.factor(vac_df$employment_status)
+vac_df$employment_industry = as.factor(vac_df$employment_industry)
+```
+
+Now seeing the summary:
+```{r}
+summary(vac_df)
+```
+
+# End of Exploratory Analysis
