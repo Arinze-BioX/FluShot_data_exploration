@@ -17,13 +17,20 @@ library(gridExtra)
 library(corrplot)
 library(psych)
 library(DescTools)
+library(VennDiagram)
+library(nVennR)
+library(UpSetR)
+library(naniar)
 ```
 ## Reading the data 
 ```{r}
 subFormat = read.csv("submission_format.csv", header = TRUE)
-testFeatures = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
-trainingFeatures = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
-trainingLabels = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+tef_data = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trf_data = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trl_data = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+testFeatures = data.frame(tef_data)
+trainingFeatures = data.frame(trf_data)
+trainingLabels = data.frame(trl_data)
 ```
 ### Number of Rows
 ```{r}
@@ -58,44 +65,410 @@ head(trainingFeatures)
 ```{r}
 head(trainingLabels)
 ```
-
-### Summaries
-* <span style="color:blue">Test Set Features</span>
+### Merging training data 
 ```{r}
-summary(testFeatures)
+trainingDF = trainingFeatures
+trainingDF$h1n1_vaccine = trainingLabels$h1n1_vaccine
+trainingDF$seasonal_vaccine = trainingLabels$seasonal_vaccine
+```
+### Checking Unique Values for Factors
+* <span style="color:blue">Age Group</span>
+```{r}
+unique(trainingFeatures["age_group"])
+```
+* <span style="color:blue">Education</span>
+```{r}
+unique(trainingFeatures["education"])
+```
+* <span style="color:blue">Race</span>
+```{r}
+unique(trainingFeatures["race"])
+```
+* <span style="color:blue">Sex</span>
+```{r}
+unique(trainingFeatures["sex"])
+```
+* <span style="color:blue">Income Poverty</span>
+```{r}
+unique(trainingFeatures["income_poverty"])
+```
+* <span style="color:blue">Marital Status</span>
+```{r}
+unique(trainingFeatures["marital_status"])
+```
+* <span style="color:blue">Rent or Own</span>
+```{r}
+unique(trainingFeatures["rent_or_own"])
+```
+* <span style="color:blue">Employment Status</span>
+```{r}
+unique(trainingFeatures["employment_status"])
+```
+* <span style="color:blue">HHS Geographical Region</span>
+```{r}
+unique(trainingFeatures["hhs_geo_region"])
+```
+* <span style="color:blue">Census MSA</span>
+```{r}
+unique(trainingFeatures["census_msa"])
 ```
 
-* <span style="color:blue">Training Set Features</span>
+* <span style="color:blue">Employment Industry</span>
 ```{r}
-summary(trainingFeatures)
+unique(trainingDF["employment_industry"])
 ```
+
+* <span style="color:blue">Employment Occupation</span>
+```{r}
+unique(trainingFeatures["employment_occupation"])
+```
+* <span style="color:blue">Household Children</span>
+```{r}
+unique(trainingFeatures["household_children"])
+```
+* <span style="color:blue">Household Adults</span>
+```{r}
+unique(trainingFeatures["household_adults"])
+```
+```{r}
+unique(trainingDF["h1n1_vaccine"])
+```
+
+
+### Data Transformation
+```{r}
+trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
+                        h1n1_concern = as.integer(h1n1_concern),
+                        h1n1_knowledge = as.integer(h1n1_knowledge),
+                        behavioral_antiviral_meds = as.logical(behavioral_antiviral_meds),
+                        behavioral_avoidance = as.logical(behavioral_avoidance),
+                        behavioral_face_mask = as.logical(behavioral_face_mask),
+                        behavioral_wash_hands = as.logical(behavioral_wash_hands),
+                        behavioral_large_gatherings = as.logical(behavioral_large_gatherings),
+                        behavioral_outside_home = as.logical(behavioral_outside_home),
+                        behavioral_touch_face = as.logical(behavioral_touch_face),
+                        doctor_recc_h1n1 = as.logical(doctor_recc_h1n1),
+                        doctor_recc_seasonal = as.logical(doctor_recc_seasonal),
+                        chronic_med_condition = as.logical(chronic_med_condition),
+                        child_under_6_months = as.logical(child_under_6_months),
+                        health_worker = as.logical(health_worker),
+                        health_insurance = as.logical(health_insurance),
+                        opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
+                        opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
+                        opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
+                        opinion_seas_vacc_effective = as.integer(opinion_seas_vacc_effective),
+                        opinion_seas_risk = as.integer(opinion_seas_risk),
+                        opinion_seas_sick_from_vacc = as.integer(opinion_seas_sick_from_vacc),
+                        age_group = as.factor(age_group),
+                        education = as.factor(education),
+                        race = as.factor(race),
+                        sex = as.factor(sex),
+                        income_poverty = as.factor(income_poverty),
+                        marital_status = as.factor(marital_status),
+                        rent_or_own = as.factor(rent_or_own),
+                        employment_status = as.factor(employment_status),
+                        hhs_geo_region = as.factor(hhs_geo_region),
+                        census_msa = as.factor(census_msa),
+                        household_adults = as.integer(household_adults),
+                        household_children = as.integer(household_children),
+                        employment_industry = as.factor(employment_industry),
+                        employment_occupation = as.factor(employment_occupation))
+```
+
+```{r}
+trainingDF <- trainingDF %>% 
+   mutate(age_group_num = as.numeric(age_group),
+          education_num = as.numeric(education),
+          race_num = as.numeric(race),
+          sex_num = as.numeric(sex),
+          income_poverty_num = as.numeric(income_poverty),
+          marital_status_num = as.numeric(marital_status),
+          rent_or_own_num = as.numeric(rent_or_own),
+          employment_status_num = as.numeric(employment_status),
+          hhs_geo_region_num = as.numeric(hhs_geo_region),
+          census_msa_num = as.numeric(census_msa),
+          employment_industry_num = as.numeric(employment_industry),
+          employment_occupation_num = as.numeric(employment_occupation))
+```
+
+
+
+### Summary : Training Features
+```{r}
+summary(trainingDF)
+```
+```{r}
+nrow(trainingDF)
+ncol(trainingDF)
+colnames(trainingDF)
+names(which(sapply(trainingDF, anyNA)))
+```
+
+```{r}
+empty <- filter(trainingDF, trainingDF$opinion_seas_vacc_effective == "")
+print(colnames(trainingDF[1]))
+total <- sum(is.na(trainingDF$opinion_h1n1_risk))
+total2 <- total + ncol(empty)
+print(ncol(empty))
+print(total)
+```
+```{r}
+total1 <- which(is.na(trainingDF$opinion_h1n1_risk))
+print(sum(is.na(trainingDF$opinion_h1n1_risk)))
+#print(total1)
+print("\n")
+total2 <- which(is.na(trainingDF$opinion_h1n1_vacc_effective))
+print(sum(is.na(trainingDF$opinion_h1n1_vacc_effective)))
+#print(total2)
+print("\n")
+total3 <- which(is.na(trainingDF$opinion_h1n1_sick_from_vacc))
+print("\n")
+total4 <- which(is.na(trainingDF$opinion_seas_vacc_effective))
+#print(total4)
+print("\n")
+total5 <- which(is.na(trainingDF$opinion_seas_sick_from_vacc))
+#print(total5)
+print("\n")
+total6 <- which(is.na(trainingDF$opinion_seas_risk))
+#print(total6)
+```
+
+```{r, error=TRUE}
+myv <- plotVenn(list(total1,total2,total3,total4,total5,total6), outFile="venn.svg")
+showSVG(nVennObj = myv, opacity = 0.1, borderWidth = 3)
+```
+```{r, fig.align='center'}
+opinions = data.frame(trainingDF$opinion_h1n1_risk, trainingDF$opinion_h1n1_sick_from_vacc, trainingDF$opinion_h1n1_vacc_effective, trainingDF$opinion_seas_risk, trainingDF$opinion_seas_sick_from_vacc, trainingDF$opinion_seas_vacc_effective)
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_risk" ] = "opinion_h1n1_risk"
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_sick_from_vacc"] = "opinion_h1n1_sick_from_vacc"
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_vacc_effective"] = "opinion_h1n1_vacc_effective"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_risk"] = "opinion_seas_risk"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_sick_from_vacc"] = "opinion_seas_sick_from_vacc"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_vacc_effective"] = "opinion_seas_vacc_effective"
+gg_miss_upset(opinions,nsets=6)
+```
+```{r, fig.align='center'}
+gg_miss_upset(trainingDF, nsets=6, order.by = "freq")
+```
+
+
+```{r}
+venn.diagram(
+   x = list(total1,total2,total3,total4,total5),
+   category.names = c("h1n1_risk","h1n1_v_eff","h1n1_sick_fvacc","seas_v_eff","seas_sick_fvacc"),
+   filename = "opinionVenn.png",
+   cat.cex = 0.75
+)
+```
+
+
+```{r, fig.align='center'}
+withNA <- which(sapply(trainingDF,anyNA))
+missingVals <-c()
+for (col in 1:50){
+   #missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
+   empty <- filter(trainingDF, trainingDF[col] == "")
+   total <- sum(is.na(trainingDF[col]) + ncol(empty))
+   print(ncol(empty))
+   missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
+}
+missingnessDF <- data.frame(cols=c(names(trainingDF)),vals=missingVals)
+summary(missingnessDF)
+p1 <- ggplot(missingnessDF, aes(x=cols, y=vals)) +
+      geom_col(fill="#fb6097", color="white", alpha=0.75) +
+     theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8), axis.text.x = element_text(angle = 45, hjust=1)) +
+     xlab("employment industry")
+p1
+```
+
+
+```{r, fig.align='center'}
+corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","household_adults","household_children"))
+corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
+```
+
+
+### Correlation Plot
+```{r, fig.align="center"}
+corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","age_group_num","education_num","race_num","income_poverty_num","marital_status_num","rent_or_own_num","employment_status_num","census_msa_num", "household_adults","household_children"))
+corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
+```
+
+
 ### Training Feature Plots 
 ```{r fig.align='center'}
-p1 <- ggplot(trainingFeatures, aes(trainingFeatures$h1n1_concern)) +
+p1 <- ggplot(trainingDF, aes(h1n1_concern)) +
       geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of H1N1 concern count") +
+      ggtitle("Graph of H1N1 concern frequency") +
       theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
       xlab("H1N1 concern")
-p2 <- ggplot(trainingFeatures, aes(trainingFeatures$h1n1_knowledge)) +
+p2 <- ggplot(trainingDF, aes(h1n1_knowledge)) +
       geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of H1N1 knowledge count") +
+      ggtitle("Graph of H1N1 knowledge frequency") +
       theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
       xlab("H1NI knowledge")
-p3 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_antiviral_meds)) +
+p3 <- ggplot(trainingDF, aes(behavioral_antiviral_meds)) +
       geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral antiviral meds count") +
+      ggtitle("Graph of behavioral antiviral meds frequency") +
       theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
       xlab("Behavioral Antiviral Meds")
-p4 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_avoidance)) +
+p4 <- ggplot(trainingDF, aes(behavioral_avoidance)) +
       geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral avoidance count") +
+      ggtitle("Graph of behavioral avoidance frequency") +
       theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
       xlab("Behavioral Avoidance")
-p4 <- ggplot(trainingFeatures, aes(trainingFeatures$behavioral_face_mask)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral face mask count") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Face Mask")
 (p1 + p2) / (p3 + p4)
+```
+
+```{r, fig.align='center'}
+p5 <- ggplot(trainingDF, aes(behavioral_face_mask)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral face mask frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Face Mask")
+p6 <- ggplot(trainingDF, aes(behavioral_wash_hands)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral wash hands frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Wash Hands")
+p7 <- ggplot(trainingDF, aes(behavioral_large_gatherings)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral large gatherings frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Large Gatherings")
+p8 <- ggplot(trainingDF, aes(behavioral_outside_home)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral outside home frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Outside Home")
+(p5+p6) / (p7+p8)
+```
+
+
+```{r, fig.align='center'}
+p9 <- ggplot(trainingDF, aes(behavioral_touch_face)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral touch face frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Touch Face")
+p10 <- ggplot(trainingDF, aes(doctor_recc_h1n1)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of docc_recc_h1n1 frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Doctor Rec H1N1 Vacc")
+p11 <- ggplot(trainingDF, aes(doctor_recc_seasonal)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of doctor_recc_seasonal frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Doctor Rec Seasonal Flue Vacc")
+p12 <- ggplot(trainingDF, aes(child_under_6_months)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of children under 6 months frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Children Under 6 Months ")
+ (p9+p10) / (p11+p12)
+```
+
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(health_worker)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of health worker frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Health Worker")
+p2 <- ggplot(trainingDF, aes(health_insurance)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of health insurance frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1NI knowledge")
+p3 <- ggplot(trainingDF, aes(opinion_h1n1_vacc_effective)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_vacc_effective frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion H1N1 Vacc Effective")
+p4 <- ggplot(trainingDF, aes(opinion_h1n1_risk)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_risk frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion H1N1 Risk")
+(p1 + p2) / (p3 + p4)
+```
+```{r, fig.align='center'}
+p5 <- ggplot(trainingDF, aes(opinion_h1n1_sick_from_vacc)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_sick_from_vacc frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Sick from H1N1 Vaccine")
+p6 <- ggplot(trainingDF, aes(opinion_seas_vacc_effective)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_vacc_effective frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Seasonal Vaccine Effective")
+p7 <- ggplot(trainingDF, aes(opinion_seas_risk)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_risk frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Seasonal Risk")
+p8 <- ggplot(trainingDF, aes(opinion_seas_sick_from_vacc)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_sick_from_vacc frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Sick From Seasonal Vaccine")
+(p5+p6) / (p7+p8)
+```
+
+```{r, fig.align='center'}
+p9 <- ggplot(trainingDF, aes(age_group)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of age_group frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("age_group")
+p10 <- ggplot(trainingDF, aes(education)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of education frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("education")
+p11 <- ggplot(trainingDF, aes(race)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of race frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("race")
+p12 <- ggplot(trainingDF, aes(sex)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of sex frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("sex")
+ (p9+p10) / (p11+p12)
+```
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(income_poverty)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of income_poverty frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("income_poverty")
+p2 <- ggplot(trainingDF, aes(marital_status)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of marital status frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("marital status")
+p3 <- ggplot(trainingDF, aes(rent_or_own)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of rent_or_own frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("rent or own")
+p4 <- ggplot(trainingDF, aes(employment_status)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of employment_status frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("employment status")
+(p1 + p2) / (p3 + p4)
+
+```
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(employment_industry)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of employment_industry frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8), axis.text.x = element_text(angle = 45, hjust=1)) +
+      xlab("employment industry")
+p1
 ```
 
