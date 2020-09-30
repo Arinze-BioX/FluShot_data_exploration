@@ -1,0 +1,49 @@
+\documentclass{IEEEtran}
+\usepackage{microtype}
+\usepackage{lipsum}
+\usepackage{cite}
+\title{Learning from the Past \\{\large Assessing and Modeling Viral Vaccination in the Face of a Pandemic}}
+\author{\small Nicholas Garside\textemdash Mechanical Engineering PhD, 2\textsuperscript{nd} year \\
+Arinze Okafor\textemdash Biomedical Engineering PhD, 2\textsuperscript{nd} year \\
+ Lucy Chikwetu\textemdash Biomedical Engineering PhD, 3\textsuperscript{rd} year  }
+\begin{document}
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+{\huge Background}\\\\
+Throughout history, the outbreak of viral infections poses one of the greatest threats to human health and civilization. The occurrence of viral pandemics has, each time, resulted in the loss of thousands to millions of lives, the crippling of global economies and supply chain, and the straining of healthcare systems~\cite{HuremoviA2019}. Vaccination remains one of the most effective long-term instruments to combat these debilitating effects. Despite its extreme importance, societal response to vaccination has not always been optimal and is influenced by several socioeconomic factors~\cite{youngVax}.\\\\
+In 2009, an outbreak of a novel influenza A (H1N1 class) virus led to the death of over half a million people. Concerted efforts to tackle this outbreak led to the development of a new H1N1 viral vaccine only seven months after the initial outbreak. Despite this success, societal acceptance and vaccination rates for both the H1N1 virus and seasonal flu remained low~\cite{ravert_fu_zimet_2012}~\cite{cdc}.\\\\ 
+Following the path of history, the recent outbreak of the Severe Acute Respiratory Syndrome-Corona Virus 2 (SARS-CoV2) has resulted in the infection of over 30 million people worldwide, while causing the death of over a million people~\cite{jhu}. Despite this unsavory development, societal attitude to the ongoing global vaccination efforts remains less than optimal, with close to half of the US population having negative or pessimistic views~\cite{fisher}. Given this undesired societal attitude, even in the face of the current pandemic, and the importance of vaccination in saving lives and the global economy, it becomes imperative to utilize analytical tools to better understand the factors affecting vaccine acceptance, predict compliance to vaccination advisories, and guide the channeling of resources to maximize rates of vaccination in a bid to save lives.\\\\ 
+{\huge Aim of Study}\\\\
+We hypothesize that the 2009 H1N1 viral outbreak allows us to learn about COVID-19 in retrospect.  This study aims to harness available datasets from the 2009 pandemic and machine learning approaches in assessing factors affecting an individual's likelihood to get a vaccine. We plan to extrapolate these results to propose recommendations for implementing a future voluntary COVID-19 vaccine.\\\\ 
+{\huge Data Description}\\\\
+The dataset came from an in-person National 2009 H1N1 Flue Survey conducted by the National Center for Health Statistics (NCHS) and the National Center for Immunization and Respiratory Diseases (NCIRD) in a bid to study the socio-economic effects influencing vaccine compliance. Nearly 40,000 United States citizens participated in the study.  In addition to capturing demographic information, the survey also gauged individuals' opinions on H1N1 or seasonal flu vaccine effectiveness, solicited behavioral tendencies, and asked participants whether or not their doctor recommended an H1N1 or flu vaccine.  The dataset has 36 features, a respondent ID, and the target variable\textemdash \textbf{\emph{h1n1\textunderscore vaccine}}. The data includes a healthy mix of nominal variables, ordinal variables, and dichotomous features such as gender and marital status. 
+\begin{center}
+
+\begin{tabular}{c c c}
+{\small Summary statistics for ordinal variables } & & {\small Summary statistics for dichotomous variables }\\ 
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline 
+& \textbf{min} & \textbf{mean} & \textbf{median} & \textbf{max} \\
+\hline 
+h1n1\textunderscore concern & 0 & 1.618 & 2 & 3\\
+\hline
+\end{tabular} &  &% end of first table 
+
+
+\begin{tabular}{|c|c|c|c|c|} %second table 
+\hline 
+& \textbf{min} & \textbf{mean} & \textbf{median} & \textbf{max} \\
+\hline 
+h1n1\textunderscore knowledge & 0 & 1.263 & 1 & 2 \\
+\hline 
+\end{tabular}
+
+\end{tabular}%outer table 
+\end{center}
+\bibliographystyle{plain}
+\bibliography{proposal_bib}
+\end{@twocolumnfalse}
+]
+\end{document}

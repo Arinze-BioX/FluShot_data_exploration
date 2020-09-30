@@ -23,7 +23,7 @@ library(UpSetR)
 library(naniar)
 ```
 ## Reading the data 
-```{r}
+```{r, echo=FALSE}
 subFormat = read.csv("submission_format.csv", header = TRUE)
 tef_data = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
 trf_data = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
@@ -274,9 +274,9 @@ for (col in 1:50){
 }
 missingnessDF <- data.frame(cols=c(names(trainingDF)),vals=missingVals)
 summary(missingnessDF)
-p1 <- ggplot(missingnessDF, aes(x=cols, y=vals)) +
+p1 <- ggplot(missingnessDF, aes(y=cols, x=vals)) +
       geom_col(fill="#fb6097", color="white", alpha=0.75) +
-     theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8), axis.text.x = element_text(angle = 45, hjust=1)) +
+     theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
      xlab("employment industry")
 p1
 ```
@@ -297,11 +297,15 @@ corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,num
 
 ### Training Feature Plots 
 ```{r fig.align='center'}
-p1 <- ggplot(trainingDF, aes(h1n1_concern)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+trainingDF <- trainingDF %>%
+   mutate(h1n1_vaccine = as.factor(h1n1_vaccine))
+p1 <- ggplot(trainingDF, aes(x=h1n1_concern, fill=h1n1_vaccine)) +
+      geom_bar(alpha=0.85) +
+      theme_classic() +
       ggtitle("Graph of H1N1 concern frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("H1N1 concern")
+      theme(plot.title = element_text(hjust = 0.5, color="#464646", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1N1 concern") +
+      scale_fill_manual(values=c("#363636", "#00be95"))
 p2 <- ggplot(trainingDF, aes(h1n1_knowledge)) +
       geom_bar(fill="firebrick2", color="white", alpha=0.5) +
       ggtitle("Graph of H1N1 knowledge frequency") +
