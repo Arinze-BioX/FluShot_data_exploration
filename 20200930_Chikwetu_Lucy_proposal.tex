@@ -1,7 +1,8 @@
 \documentclass{IEEEtran}
 \usepackage{microtype}
-\usepackage{lipsum}
 \usepackage{cite}
+\usepackage[pdftex]{graphicx}
+\usepackage{amsmath}
 \title{Learning from the Past \\{\large Assessing and Modeling Viral Vaccination in the Face of a Pandemic}}
 \author{\small Nicholas Garside\textemdash Mechanical Engineering PhD, 2\textsuperscript{nd} year \\
 Arinze Okafor\textemdash Biomedical Engineering PhD, 2\textsuperscript{nd} year \\
@@ -17,7 +18,9 @@ Following the path of history, the recent outbreak of the Severe Acute Respirato
 {\huge Aim of Study}\\\\
 We hypothesize that the 2009 H1N1 viral outbreak allows us to learn about COVID-19 in retrospect.  This study aims to harness available datasets from the 2009 pandemic and machine learning approaches in assessing factors affecting an individual's likelihood to get a vaccine. We plan to extrapolate these results to propose recommendations for implementing a future voluntary COVID-19 vaccine.\\\\ 
 {\huge Data Description}\\\\
-The dataset came from an in-person National 2009 H1N1 Flue Survey conducted by the National Center for Health Statistics (NCHS) and the National Center for Immunization and Respiratory Diseases (NCIRD) in a bid to study the socio-economic effects influencing vaccine compliance. Nearly 40,000 United States citizens participated in the study.  In addition to capturing demographic information, the survey also gauged individuals' opinions on H1N1 or seasonal flu vaccine effectiveness, solicited behavioral tendencies, and asked participants whether or not their doctor recommended an H1N1 or flu vaccine.  The dataset has 36 features, a respondent ID, and the target variable\textemdash \textbf{\emph{h1n1\textunderscore vaccine}}. The data includes a healthy mix of nominal variables, ordinal variables, and dichotomous features such as gender and marital status.  Table 1. shows the summary of statistics for available features and the output. 
+The dataset came from an in-person National 2009 H1N1 Flue Survey conducted by the National Center for Health Statistics (NCHS) and the National Center for Immunization and Respiratory Diseases (NCIRD) in a bid to study the socio-economic effects influencing vaccine compliance. Nearly 40,000 United States citizens participated in the study.  In addition to capturing demographic information, the survey also gauged individuals' opinions on H1N1 or seasonal flu vaccine effectiveness, solicited behavioral tendencies, and asked participants whether or not their doctor recommended an H1N1 or flu vaccine.  The dataset has 36 features, a respondent ID, and the target variable\textemdash \textbf{\emph{h1n1\textunderscore vaccine}}. The data includes a healthy mix of nominal variables, ordinal variables, and dichotomous features such as gender and marital status.  Table 1. shows the summary of statistics for available features and the output.\\\\
+{\huge Missing Values}\\\\ 
+Fig 1. is the visual representation of our missing values. Without a doubt, health insurance had the most missing values. We also recognize some unique patterns that facilitate smooth imputation. Those who did not fill out their opinions on particular issues tended not to fill out most of the opinion section. Children under six months old also missed information about whether or not they were healthcare workers, had health insurance, or had chronic medical conditions, and data imputation for such cases was easy. 
 \end{@twocolumnfalse}
 ]
 \clearpage
@@ -109,13 +112,19 @@ h1n1\textunderscore vaccine & 0 & 0.213 & 0 & 1\\
 \quad \\
 \textbf{Table 1: Summary of statistics of all variables (including the output)}
 \end{center}
-
-
-
-
-
-\bibliographystyle{plain}
-\bibliography{proposal_bib}
 \end{@twocolumnfalse}
 ]
+\onecolumn{
+\begin{center}
+\begin{tabular}{cc}
+\multicolumn{2}{c}{\includegraphics[scale=0.6]{missingnessMap}}\\
+\multicolumn{2}{c}{Fig 1. Visual representation of missing values}\\
+\includegraphics[width=0.5\columnwidth]{children} & \includegraphics[width=0.5\columnwidth]{opinions}\\
+Fig 2. & Fig 3.\\ 
+\end{tabular}
+\end{center}
+\bibliographystyle{plain}
+\bibliography{proposal_bib}
+}
+
 \end{document}

@@ -70,7 +70,6 @@ head(trainingLabels)
 trainingDF = trainingFeatures
 trainingDF$h1n1_vaccine = trainingLabels$h1n1_vaccine
 trainingDF$seasonal_vaccine = trainingLabels$seasonal_vaccine
-summary(trainingDF)
 ncol(trainingDF)
 ```
 ### Checking Unique Values for Factors
@@ -177,27 +176,9 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
                         employment_occupation = as.factor(employment_occupation))
 ```
 
-```{r}
-trainingDF <- trainingDF %>% 
-   mutate(age_group_num = as.numeric(age_group),
-          education_num = as.numeric(education),
-          race_num = as.numeric(race),
-          sex_num = as.numeric(sex),
-          income_poverty_num = as.numeric(income_poverty),
-          marital_status_num = as.numeric(marital_status),
-          rent_or_own_num = as.numeric(rent_or_own),
-          employment_status_num = as.numeric(employment_status),
-          hhs_geo_region_num = as.numeric(hhs_geo_region),
-          census_msa_num = as.numeric(census_msa),
-          employment_industry_num = as.numeric(employment_industry),
-          employment_occupation_num = as.numeric(employment_occupation))
-```
-
-
 
 ### Summary : Training Features
 ```{r}
-summary(trainingDF)
 ```
 ```{r}
 nrow(trainingDF)
@@ -239,6 +220,17 @@ total6 <- which(is.na(trainingDF$opinion_seas_risk))
 myv <- plotVenn(list(total1,total2,total3,total4,total5,total6), outFile="venn.svg")
 showSVG(nVennObj = myv, opacity = 0.1, borderWidth = 3)
 ```
+
+
+```{r, fig.align='center'}
+pmiss <- vis_miss(trainingDF, warn_large_data = FALSE) +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, angle=0), axis.title = element_text(size=8), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+   coord_flip()
+pmiss
+```
+
+
+
 ```{r, fig.align='center'}
 opinions = data.frame(trainingDF$opinion_h1n1_risk, trainingDF$opinion_h1n1_sick_from_vacc, trainingDF$opinion_h1n1_vacc_effective, trainingDF$opinion_seas_risk, trainingDF$opinion_seas_sick_from_vacc, trainingDF$opinion_seas_vacc_effective)
 names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_risk" ] = "opinion_h1n1_risk"
@@ -264,7 +256,7 @@ venn.diagram(
 ```
 
 
-```{r, fig.align='center'}
+```{r, fig.align='center', error=TRUE}
 withNA <- which(sapply(trainingDF,anyNA))
 missingVals <-c()
 for (col in 1:50){
@@ -275,28 +267,18 @@ for (col in 1:50){
    missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
 }
 missingnessDF <- data.frame(cols=c(names(trainingDF)),vals=missingVals)
-summary(missingnessDF)
 p1 <- ggplot(missingnessDF, aes(y=cols, x=vals)) +
       geom_col(fill="#fb6097", color="white", alpha=0.75) +
      theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
      xlab("employment industry")
 p1
 ```
+### Correlation Plot
 
-
-```{r, fig.align='center'}
+```{r, fig.align='center', error=TRUE}
 corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","household_adults","household_children"))
 corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
 ```
-
-
-### Correlation Plot
-```{r, fig.align="center"}
-corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","age_group_num","education_num","race_num","income_poverty_num","marital_status_num","rent_or_own_num","employment_status_num","census_msa_num", "household_adults","household_children"))
-corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
-```
-
-
 ### Training Feature Plots 
 ```{r fig.align='center'}
 trainingDF <- trainingDF %>%
