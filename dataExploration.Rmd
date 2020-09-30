@@ -70,6 +70,8 @@ head(trainingLabels)
 trainingDF = trainingFeatures
 trainingDF$h1n1_vaccine = trainingLabels$h1n1_vaccine
 trainingDF$seasonal_vaccine = trainingLabels$seasonal_vaccine
+summary(trainingDF)
+ncol(trainingDF)
 ```
 ### Checking Unique Values for Factors
 * <span style="color:blue">Age Group</span>
