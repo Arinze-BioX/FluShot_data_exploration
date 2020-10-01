@@ -542,7 +542,7 @@ trainingDF[,2:38] %>%
    facet_wrap(~ feature,scales="free") +
    theme_classic() +
    theme(plot.title = element_text(hjust = 0.5, color="black", size=10), axis.text = element_text(size=6, color ="black"), axis.title = element_text(size=10), legend.text = element_text(size=8), legend.title = element_text(size=8), legend.position = "top", strip.text = element_text(size=8)) +
-   xlab("Fig 4. Relationship between features and H1N1 vaccination") +
+   xlab("Fig 1. Relationship between features and H1N1 vaccination") +
    scale_fill_manual(values=c("#f9766d", "#00be95"))
 ```
 
