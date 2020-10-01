@@ -112,9 +112,11 @@ h1n1\textunderscore vaccine & 0 & 0.213 & 0 & 1\\
 \end{center}
 {\huge Distributions}\\
 We plotted stacked bar graphs to show each feature's relationship with the target variable\textemdash no strong associations where identified for the H1N1 vaccine, but interesting associations were identified for seasonal flu vaccine. H1N1 vaccine had a mean of 0.2125 and seasonal flu vaccine had 0.4656, and this could have contributed to the disparity we observed.  Fig. 1 shows the plots for each feature's relationship with the seasonal flu vaccine. \\\\
+{\huge Preliminary Relationships Between Features}\\\\
+The team did a preliminary analysis of the ordinal and binary features' correlations using Spearman?s ranking method. Results from this analysis have are shown in Fig. 5, with only significant correlations being displayed. This analysis briefly revealed a significant positive correlation between the features: concern about the H1N1 virus, positive opinions on the vaccine, and age; and vaccine compliance (p$<$0.05). Also, older people seemed to have higher vaccination compliance (p$<$0.05), and people tend to comply more when their doctors recommend the vaccine (p$<$0.05). The relationship between the nominal variables and the outcome variables was accessed using the Chisquare test for statistical independence. This revealed that, of all six nominal variables (employment occupation, employment industry, employment occupation, region of residence as defined by the U.S. Dept. of Health and Human Services, region of residence by the metropolitan statistical areas and race), compliance with H1N1 vaccination were not independent of the respondent?s region of residence defined by the metropolitan statistical areas (X-squared = 0.11411 , P=0.95). This was not the case for compliance with seasonal vaccination. However, the interpretation of this is limited as the exact metropolitan statistical areas have been deidentified, making it difficult to know which areas were compliant and which were not.\\\\
 {\huge Possible Modeling Approaches}\\\\
 This dataset is part of an online competition hosted by drivendata.org~\cite{drivendata}. The competition's organizers split the dataset into two halves--one for training and another for testing. Label values (h1n1\textunderscore vaccine and seasonal\textunderscore vaccine) were only provided for the training data with a training data sample size of 26,707. The test dataset labels were withheld to facilitate the unbiased evaluation of model performance for the competition. We plan to further split the training set provided into training, validation, and testing datasets in order to enable model training, prevent model overfitting and enable model evaluation. We will split the data set into three groups using a split ratio of 60:20:20 for training, validation, and testing, respectively. 
-To gain some insight into the fundamental linear and non-linear relationships between predictors and our outcome variable, we will explore less flexible but interpretable modeling approaches. Per our study goals and for the competition, we aim to develop a predictive model focusing on maximizing prediction accuracy. For this purpose, we will explore highly flexible approaches such as some tree-based methods (e.g., random forest, XGBoost), neural network-based methods (e.g., Multi-Layered Perceptron).\\\\ 
+To gain some insight into the fundamental linear and non-linear relationships between predictors and our outcome variable, we will explore less flexible but interpretable modeling approaches. Per our study goals and for the competition, we aim to develop a predictive model focusing on maximizing prediction accuracy. For this purpose, we will explore highly flexible approaches such as some tree-based methods (e.g., random forest, XGBoost), neural network-based methods (e.g., Multi-Layered Perceptron). Spanning the degree of model flexibility is a major goal, as we strive to both intuitively understand influencing factors and accurately predict outcomes as we apply our predictions to the real-world problem.\\\\ 
 {\huge Conclusion}\\\\
 This project aims to answer the currently relevant question: What are the leading predictors of vaccination, and to what extent can we predict novel disease vaccination rates from these features? This question is becoming increasingly relevant as COVID-19 is nearing vaccine completion, for the answer could help guide public vaccination efforts in the future. 
 \end{@twocolumnfalse}
@@ -129,8 +131,11 @@ This project aims to answer the currently relevant question: What are the leadin
 \includegraphics[width=0.53\columnwidth]{children} & \includegraphics[width=0.53\columnwidth]{opinions}\\
 \multicolumn{2}{c}{Fig 3. \hspace{8.5cm} Fig 4.}\\
 \end{tabular}
+\end{center}
+}
+\clearpage
+\onecolumn{
 \bibliographystyle{plain}
 \bibliography{proposal_bib}
-\end{center}
 }
 \end{document}
