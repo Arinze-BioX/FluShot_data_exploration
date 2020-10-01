@@ -355,8 +355,8 @@ corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,num
 ### Training Feature Plots 
 ```{r fig.align='center'}
 trainingDF <- trainingDF %>%
-   mutate(h1n1_vaccine = as.factor(h1n1_vaccine))
-p1 <- ggplot(trainingDF, aes(x=h1n1_concern, fill=h1n1_vaccine)) +
+   mutate(seasonal_vaccine = as.factor(seasonal_vaccine))
+p1 <- ggplot(trainingDF, aes(x=h1n1_concern, fill=seasonal_vaccine)) +
       geom_bar(alpha=0.85) +
       theme_classic() +
       ggtitle("Graph of H1N1 concern frequency") +
@@ -536,13 +536,13 @@ p1
 
 ```{r, fig.align='center', fig.width=12, fig.height=6} 
 trainingDF[,2:38] %>%
-   gather(-h1n1_vaccine, key="feature", value="value") %>%
-   ggplot(aes(x=value, fill=h1n1_vaccine)) +
+   gather(-seasonal_vaccine, key="feature", value="value") %>%
+   ggplot(aes(x=value, fill=seasonal_vaccine)) +
    geom_bar(alpha=0.85) +
    facet_wrap(~ feature,scales="free") +
    theme_classic() +
    theme(plot.title = element_text(hjust = 0.5, color="black", size=10), axis.text = element_text(size=6, color ="black"), axis.title = element_text(size=10), legend.text = element_text(size=8), legend.title = element_text(size=8), legend.position = "top", strip.text = element_text(size=8)) +
-   xlab("Fig 1. Relationship between features and H1N1 vaccination") +
+   xlab("Fig 1. Relationship between features and seasonal flu vaccination") +
    scale_fill_manual(values=c("#f9766d", "#00be95"))
 ```
 
