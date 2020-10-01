@@ -3,6 +3,7 @@
 \usepackage{cite}
 \usepackage[pdftex]{graphicx}
 \usepackage{amsmath}
+\usepackage[margin=0.35in]{geometry}
 \title{Learning from the Past \\{\large Assessing and Modeling Viral Vaccination in the Face of a Pandemic}}
 \author{\small Nicholas Garside\textemdash Mechanical Engineering PhD, 2\textsuperscript{nd} year \\
 Arinze Okafor\textemdash Biomedical Engineering PhD, 2\textsuperscript{nd} year \\
@@ -23,7 +24,7 @@ The dataset came from an in-person National 2009 H1N1 Flue Survey conducted by t
 Fig 1. is the visual representation of our missing values. Without a doubt, health insurance had the most missing values. We also recognize some unique patterns that facilitate smooth imputation. Those who did not fill out their opinions on particular issues tended not to fill out most of the opinion section. Children under six months old also missed information about whether or not they were healthcare workers, had health insurance, or had chronic medical conditions, and data imputation for such cases was easy. Fig 2. and Fig. 3 support the validity of those special cases. We also made intelligent inferences to impute missing values, for example, if an individual's employment status was listed as \emph{Not in Labor Force} or \emph{Unemployed} and they had no occupation, we created a new occupation and employent indusry factor called \emph{Unemployed} and we would list the individual in that category.
 \end{@twocolumnfalse}
 ]
-\clearpage
+
 
 \twocolumn[
 \begin{@twocolumnfalse}
@@ -103,28 +104,28 @@ seasonal\textunderscore vaccine & 0 & 0.466 & 0 & 1\\
 h1n1\textunderscore vaccine & 0 & 0.213 & 0 & 1\\
 \hline
 \multicolumn{4}{l}{}\\
-\end{tabular}
-
+\end{tabular}\\
+& & \\
+\multicolumn{3}{c}{Table 1: Summary of statistics of all variables (including the output)}\\
 \end{tabular}%outer table 
 }
-\quad \\
-\quad \\
-{Table 1: Summary of statistics of all variables (including the output)}
 \end{center}
-{\huge Distributions}
+{\huge Distributions}\\
+ssssj
 \end{@twocolumnfalse}
 ]
+
 \onecolumn{
 \begin{center}
-\begin{tabular}{cc}
-\multicolumn{2}{c}{\includegraphics[scale=0.6]{missingnessMap}}\\
+\begin{tabular}{p{8cm}p{8cm}}
+\multicolumn{2}{c}{\includegraphics[scale=0.55]{relationships}}\\
+\multicolumn{2}{c}{\includegraphics[scale=0.55]{missingnessMap}}\\
 \multicolumn{2}{c}{Fig 1. Visual representation of missing values}\\
-\includegraphics[width=0.5\columnwidth]{children} & \includegraphics[width=0.5\columnwidth]{opinions}\\
-Fig 2. & Fig 3.\\ 
+\includegraphics[width=0.53\columnwidth]{children} & \includegraphics[width=0.53\columnwidth]{opinions}\\
+ \multicolumn{2}{c}{Fig 2. \hspace{8.5cm} Fig 3.}
 \end{tabular}
-\end{center}
 \bibliographystyle{plain}
 \bibliography{proposal_bib}
+\end{center}
 }
-
 \end{document}
