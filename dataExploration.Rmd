@@ -772,14 +772,28 @@ Split training set into train and test sets.
 #Splitting for rf model
 smp_size <- floor(0.75 * nrow(train.rf.imp))
 train_ind <- sample(seq_len(nrow(train.rf.imp)), size = smp_size)
-X.rf_train <- train.rf.imp[train_ind, ]
-X.rf_test <- train.rf.imp[-train_ind, ]
-y.rf_train = labels[train_ind,]
-y.rf_test= labels[-train_ind,]
+X.rf_train <- train.rf.imp[train_ind, ] 
+X.rf_test <- train.rf.imp[-train_ind, ] 
+y.rf_train = labels[train_ind,] 
+y.rf_test= labels[-train_ind,] 
 
-X.rand_train <- training.random[train_ind, ]
-X.rand_test <- training.random[-train_ind, ]
-y.rand_train = labels[train_ind,]
-y.rand_test= labels[-train_ind,]
+
+X.rand_train <- training.random[train_ind, ] %>% subset(., select=-c(respondent_id, h1n1_vaccine, seasonal_vaccine))
+X.rand_test <- training.random[-train_ind, ] %>% subset(., select=-c(respondent_id, h1n1_vaccine, seasonal_vaccine))
+y.rand_train = training.random[train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+y.rand_test= training.random[-train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+```
+
+Write final files to csv file
+```{r}
+write.csv(X.rf_train, "modelImp_xtrain.csv")
+write.csv(X.rf_test, "modelImp_xtest.csv")
+write.csv(y.rf_train, "modelImp_ytrain.csv")
+write.csv(y.rf_test, "modelImp_ytest.csv")
+
+write.csv(X.rand_train, "randImp_xtrain.csv")
+write.csv(X.rand_test, "randImp_xtest.csv")
+write.csv(y.rand_train, "randImp_ytrain.csv")
+write.csv(y.rand_test, "randImp_ytest.csv")
 ```
 
