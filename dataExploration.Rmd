@@ -1,0 +1,814 @@
+---
+title: "Data Exploration"
+author: "Lucy Chikwetu"
+date: "9/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(tidyquant)
+library(ggplot2)
+library(lubridate)
+library(patchwork)
+library(gridExtra)
+library(corrplot)
+library(psych)
+library(DescTools)
+library(VennDiagram)
+library(nVennR)
+library(UpSetR)
+library(naniar)
+library(plyr)
+library(visdat)
+library(svglite)
+```
+## Reading the data 
+```{r, echo=FALSE}
+subFormat = read.csv("submission_format.csv", header = TRUE)
+tef_data = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trf_data = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trl_data = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+testFeatures = data.frame(tef_data)
+trainingFeatures = data.frame(trf_data)
+trainingLabels = data.frame(trl_data)
+```
+### Number of Rows
+```{r}
+nrow(subFormat)
+nrow(testFeatures)
+nrow(trainingFeatures)
+nrow(trainingLabels)
+```
+### Number of Columns 
+```{r}
+ncol(subFormat)
+ncol(testFeatures)
+ncol(trainingFeatures)
+ncol(trainingLabels)
+```
+
+
+### Head Viewing 
+* <span style="color:blue">Submission Format</span>
+```{r}
+head(subFormat)
+```
+* <span style="color:blue">Test Set Features</span>
+```{r}
+head(testFeatures)
+```
+* <span style="color:blue">Training Set Features</span>
+```{r}
+head(trainingFeatures)
+```
+* <span style="color:blue">Submission Format</span>
+```{r}
+head(trainingLabels)
+```
+### Merging training data 
+```{r}
+trainingDF = trainingFeatures
+trainingDF$h1n1_vaccine = trainingLabels$h1n1_vaccine
+trainingDF$seasonal_vaccine = trainingLabels$seasonal_vaccine
+ncol(trainingDF)
+```
+### Checking Unique Values for Factors
+* <span style="color:blue">Age Group</span>
+```{r}
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "55 - 64 Years"] = "55-64"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "35 - 44 Years"] = "35-44"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "18 - 34 Years"] = "18-34"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "65+ Years"] = "65+"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "45 - 54 Years"] = "45-54"
+unique(trainingFeatures["age_group"])
+```
+* <span style="color:blue">Education</span>
+```{r}
+unique(trainingFeatures["education"])
+levels(trainingDF$education)[levels(trainingDF$education) == "College Graduate"] = "Grad"
+levels(trainingDF$education)[levels(trainingDF$education) == "Some College"] = "College"
+levels(trainingDF$education)[levels(trainingDF$education) == "< 12 Years"] = "<12 Yrs"
+levels(trainingDF$education)[levels(trainingDF$education) == "12 Years"] = "12 Yrs"
+```
+* <span style="color:blue">Race</span>
+```{r}
+unique(trainingFeatures["race"])
+levels(trainingDF$race)[levels(trainingDF$race) == "Other or Multiple"] = "Other"
+```
+* <span style="color:blue">Sex</span>
+```{r}
+unique(trainingFeatures["sex"])
+```
+* <span style="color:blue">Income Poverty</span>
+```{r}
+unique(trainingFeatures["income_poverty"])
+levels(trainingDF$income_poverty)[levels(trainingDF$income_poverty) == "<= $75,000, Above Poverty"] = "<=75K"
+levels(trainingDF$income_poverty)[levels(trainingDF$income_poverty) == "> $75,000"] = ">75K"
+```
+* <span style="color:blue">Marital Status</span>
+```{r}
+unique(trainingFeatures["marital_status"])
+```
+* <span style="color:blue">Rent or Own</span>
+```{r}
+unique(trainingFeatures["rent_or_own"])
+```
+* <span style="color:blue">Employment Status</span>
+```{r}
+unique(trainingFeatures["employment_status"])
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Not in Labor Force"] = "~Labor"
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Employed"] = "Emp"
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Unemployed"] = "unEmp"
+```
+* <span style="color:blue">HHS Geographical Region</span>
+```{r}
+unique(trainingFeatures["hhs_geo_region"])
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "oxchjgsf"] = "A"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "bhuqouqj"] = "B"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "qufhixun"] = "C"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "lrircsnp"] = "D"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "atmpeygn"] = "E"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "lzgpxyit"] = "F"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "fpwskwrf"] = "G"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "mlyzmhmf"] = "H"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "dqpwygqj"] = "I"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "kbazzjca"] = "J"
+```
+* <span style="color:blue">Census MSA</span>
+```{r}
+unique(trainingFeatures["census_msa"])
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "Non-MSA"] = "Non"
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "MSA, Principle City"] = "Principle"
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "MSA, Not Principle  City"] = "Not Principle"
+```
+
+* <span style="color:blue">Employment Industry</span>
+```{r}
+unique(trainingDF["employment_industry"])
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "pxcmvdjn"] = "a"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "rucpziij"] = "b"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "wxleyezf"] = "c"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "saaquncn"] = "d"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "xicduogh"] = "e"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "ldnlellj"] = "f"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "wlfvacwt"] = "g"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "nduyfdeo"] = "h"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "fcxhlnwr"] = "i"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "vjjrobsf"] = "j"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "arjwrbjb"] = "k"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "atmlpfrs"] = "l"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "msuufmds"] = "m"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "xqicxuve"] = "n"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "phxvnwax"] = "o"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "dotnnunm"] = "p"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "mfikgejo"] = "q"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "cfqqtusy"] = "r"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "mcubkhph"] = "s"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "qnlwzans"] = "t"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "haxffmxo"] = "u"
+```
+
+* <span style="color:blue">Employment Occupation</span>
+```{r}
+unique(trainingFeatures["employment_occupation"])
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xgwztkwe"] = "a"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xtkaffoo"] = "b"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "emcorrxb"] = "c"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "vlluhbov"] = "d"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xqwwgdyp"] = "e"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "ccgxvspp"] = "f"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "qxajmpny"] = "g"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "kldqjyjy"] = "h"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "mxkfnird"] = "i"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "hfxkjkmi"] = "j"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "bxpfxfdn"] = "k"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "ukymxvdu"] = "l"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "cmhcxjea"] = "m"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "haliazsg"] = "n"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "dlvbwzss"] = "o"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xzmlyyjv"] = "p"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "oijqvulv"] = "q"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "rcertsgn"] = "r"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "tfqavkke"] = "s"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "hodpvpew"] = "t"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "uqqtjvyb"] = "u"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "pvmttkik"] = "v"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "dcjcmpih"] = "w"
+```
+* <span style="color:blue">Household Children</span>
+```{r}
+unique(trainingFeatures["household_children"])
+```
+* <span style="color:blue">Household Adults</span>
+```{r}
+unique(trainingFeatures["household_adults"])
+```
+```{r}
+unique(trainingDF["h1n1_vaccine"])
+```
+
+
+### Data Transformation
+```{r}
+trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
+                        h1n1_concern = as.integer(h1n1_concern),
+                        h1n1_knowledge = as.integer(h1n1_knowledge),
+                        behavioral_antiviral_meds = as.logical(behavioral_antiviral_meds),
+                        behavioral_avoidance = as.logical(behavioral_avoidance),
+                        behavioral_face_mask = as.logical(behavioral_face_mask),
+                        behavioral_wash_hands = as.logical(behavioral_wash_hands),
+                        behavioral_large_gatherings = as.logical(behavioral_large_gatherings),
+                        behavioral_outside_home = as.logical(behavioral_outside_home),
+                        behavioral_touch_face = as.logical(behavioral_touch_face),
+                        doctor_recc_h1n1 = as.logical(doctor_recc_h1n1),
+                        doctor_recc_seasonal = as.logical(doctor_recc_seasonal),
+                        chronic_med_condition = as.logical(chronic_med_condition),
+                        child_under_6_months = as.logical(child_under_6_months),
+                        health_worker = as.logical(health_worker),
+                        health_insurance = as.logical(health_insurance),
+                        sex = as.factor(sex),
+                        h1n1_vaccine = as.logical(h1n1_vaccine),
+                        seasonal_vaccine = as.logical(seasonal_vaccine),
+                        rent_or_own = as.factor(rent_or_own),
+                        marital_status = as.factor(marital_status),
+                        opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
+                        opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
+                        opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
+                        opinion_seas_vacc_effective = as.integer(opinion_seas_vacc_effective),
+                        opinion_seas_risk = as.integer(opinion_seas_risk),
+                        opinion_seas_sick_from_vacc = as.integer(opinion_seas_sick_from_vacc),
+                        age_group = as.factor(age_group),
+                        education = as.factor(education),
+                        race = as.factor(race),
+                        income_poverty = as.factor(income_poverty),
+                        employment_status = as.factor(employment_status),
+                        hhs_geo_region = as.factor(hhs_geo_region),
+                        census_msa = as.factor(census_msa),
+                        household_adults = as.integer(household_adults),
+                        household_children = as.integer(household_children),
+                        employment_industry = as.factor(employment_industry),
+                        employment_occupation = as.factor(employment_occupation))
+```
+
+
+###Viewing missing points
+```{r, fig.align='center'}
+pmiss <- vis_miss(trainingDF, warn_large_data = FALSE) +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, angle=0), axis.title = element_text(size=8), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+   coord_flip()
+pmiss
+ggsave("vis_miss.svg")
+```
+
+
+
+```{r, fig.align='center'}
+opinions = data.frame(trainingDF$opinion_h1n1_risk, trainingDF$opinion_h1n1_sick_from_vacc, trainingDF$opinion_h1n1_vacc_effective, trainingDF$opinion_seas_risk, trainingDF$opinion_seas_sick_from_vacc, trainingDF$opinion_seas_vacc_effective)
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_risk" ] = "opinion_h1n1_risk"
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_sick_from_vacc"] = "opinion_h1n1_sick_from_vacc"
+names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_vacc_effective"] = "opinion_h1n1_vacc_effective"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_risk"] = "opinion_seas_risk"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_sick_from_vacc"] = "opinion_seas_sick_from_vacc"
+names(opinions)[names(opinions) == "trainingDF.opinion_seas_vacc_effective"] = "opinion_seas_vacc_effective"
+gg_miss_upset(opinions,nsets=6)
+```
+```{r, fig.align='center'}
+gg_miss_upset(trainingDF, nsets=6, order.by = "freq")
+```
+
+
+
+```{r, fig.align='center', error=TRUE}
+withNA <- which(sapply(trainingDF,anyNA))
+missingVals <-c()
+for (col in 1:50){
+   #missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
+   empty <- filter(trainingDF, trainingDF[col] == "")
+   total <- sum(is.na(trainingDF[col]) + ncol(empty))
+   print(ncol(empty))
+   missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
+}
+missingnessDF <- data.frame(cols=c(names(trainingDF)),vals=missingVals)
+p1 <- ggplot(missingnessDF, aes(y=cols, x=vals)) +
+      geom_col(fill="#fb6097", color="white", alpha=0.75) +
+     theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+     xlab("employment industry")
+p1
+```
+### Correlation Plot
+
+```{r, fig.align='center', error=TRUE}
+corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","household_adults","household_children"))
+corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
+```
+### Training Feature Plots 
+```{r fig.align='center'}
+trainingDF <- trainingDF %>%
+   mutate(seasonal_vaccine = as.factor(seasonal_vaccine))
+p1 <- ggplot(trainingDF, aes(x=h1n1_concern, fill=seasonal_vaccine)) +
+      geom_bar(alpha=0.85) +
+      theme_classic() +
+      ggtitle("Graph of H1N1 concern frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="#464646", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1N1 concern") +
+      scale_fill_manual(values=c("#363636", "#00be95"))
+p2 <- ggplot(trainingDF, aes(h1n1_knowledge)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of H1N1 knowledge frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1NI knowledge")
+p3 <- ggplot(trainingDF, aes(behavioral_antiviral_meds)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral antiviral meds frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Antiviral Meds")
+p4 <- ggplot(trainingDF, aes(behavioral_avoidance)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral avoidance frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Avoidance")
+(p1 + p2) / (p3 + p4)
+```
+
+```{r, fig.align='center'}
+p5 <- ggplot(trainingDF, aes(behavioral_face_mask)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral face mask frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Face Mask")
+p6 <- ggplot(trainingDF, aes(behavioral_wash_hands)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral wash hands frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Wash Hands")
+p7 <- ggplot(trainingDF, aes(behavioral_large_gatherings)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral large gatherings frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Large Gatherings")
+p8 <- ggplot(trainingDF, aes(behavioral_outside_home)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral outside home frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Outside Home")
+(p5+p6) / (p7+p8)
+```
+
+
+```{r, fig.align='center'}
+p9 <- ggplot(trainingDF, aes(behavioral_touch_face)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of behavioral touch face frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Behavioral Touch Face")
+p10 <- ggplot(trainingDF, aes(doctor_recc_h1n1)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of docc_recc_h1n1 frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Doctor Rec H1N1 Vacc")
+p11 <- ggplot(trainingDF, aes(doctor_recc_seasonal)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of doctor_recc_seasonal frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Doctor Rec Seasonal Flue Vacc")
+p12 <- ggplot(trainingDF, aes(child_under_6_months)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of children under 6 months frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Children Under 6 Months ")
+ (p9+p10) / (p11+p12)
+```
+
+
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(health_worker)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of health worker frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Health Worker")
+p2 <- ggplot(trainingDF, aes(health_insurance)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of health insurance frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("H1NI knowledge")
+p3 <- ggplot(trainingDF, aes(opinion_h1n1_vacc_effective)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_vacc_effective frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion H1N1 Vacc Effective")
+p4 <- ggplot(trainingDF, aes(opinion_h1n1_risk)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_risk frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion H1N1 Risk")
+(p1 + p2) / (p3 + p4)
+```
+
+
+```{r, fig.align='center'}
+p5 <- ggplot(trainingDF, aes(opinion_h1n1_sick_from_vacc)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_h1n1_sick_from_vacc frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Sick from H1N1 Vaccine")
+p6 <- ggplot(trainingDF, aes(opinion_seas_vacc_effective)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_vacc_effective frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Seasonal Vaccine Effective")
+p7 <- ggplot(trainingDF, aes(opinion_seas_risk)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_risk frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Seasonal Risk")
+p8 <- ggplot(trainingDF, aes(opinion_seas_sick_from_vacc)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of opinion_seas_sick_from_vacc frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("Opinion Sick From Seasonal Vaccine")
+(p5+p6) / (p7+p8)
+```
+
+
+```{r, fig.align='center'}
+p9 <- ggplot(trainingDF, aes(age_group)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of age_group frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("age_group")
+p10 <- ggplot(trainingDF, aes(education)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of education frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("education")
+p11 <- ggplot(trainingDF, aes(race)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of race frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("race")
+p12 <- ggplot(trainingDF, aes(sex)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of sex frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("sex")
+ (p9+p10) / (p11+p12)
+```
+
+
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(income_poverty)) +
+      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
+      ggtitle("Graph of income_poverty frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("income_poverty")
+p2 <- ggplot(trainingDF, aes(marital_status)) +
+      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
+      ggtitle("Graph of marital status frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("marital status")
+p3 <- ggplot(trainingDF, aes(rent_or_own)) +
+      geom_bar(fill="cyan3", color="white", alpha=0.5) +
+      ggtitle("Graph of rent_or_own frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("rent or own")
+p4 <- ggplot(trainingDF, aes(employment_status)) +
+      geom_bar(fill="gold", color="white", alpha=0.5) +
+      ggtitle("Graph of employment_status frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
+      xlab("employment status")
+(p1 + p2) / (p3 + p4)
+
+```
+
+
+```{r, fig.align='center'}
+p1 <- ggplot(trainingDF, aes(employment_industry)) +
+      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
+      ggtitle("Graph of employment_industry frequency") +
+      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8), axis.text.x = element_text(angle = 45, hjust=1)) +
+      xlab("employment industry")
+p1
+```
+
+
+```{r, fig.align='center', fig.width=12, fig.height=6} 
+trainingDF[,2:38] %>%
+   gather(-h1n1_vaccine, key="feature", value="value") %>%
+   ggplot(aes(x=value, fill=h1n1_vaccine)) +
+   geom_bar(alpha=0.85) +
+   facet_wrap(~ feature,scales="free") +
+   theme_classic() +
+   theme(plot.title = element_text(hjust = 0.5, color="black", size=10), axis.text = element_text(size=6, color ="black"), axis.title = element_text(size=10), legend.text = element_text(size=8), legend.title = element_text(size=8), legend.position = "top", strip.text = element_text(size=8)) +
+   xlab("Fig 1. Relationship between features and h1n1 vaccination") +
+   scale_fill_manual(values=c("#fb766d", "#01acb6"))
+ggsave("h1n1_vaccine.png")
+```
+
+Filling in Missingness for Employment Information:
+```{r}
+trainingDF$employment_occupation = as.character(trainingDF$employment_occupation)
+trainingDF$employment_status = as.character(trainingDF$employment_status)
+trainingDF$employment_industry = as.character(trainingDF$employment_industry)
+trainingDF[trainingDF$employment_status%in%c("Not in Labor Force","Unemployed")&trainingDF$employment_occupation=="",c("employment_occupation", "employment_industry")] <- "Unemployed"
+trainingDF$employment_occupation = as.factor(trainingDF$employment_occupation)
+trainingDF$employment_status = as.factor(trainingDF$employment_status)
+trainingDF$employment_industry = as.factor(trainingDF$employment_industry)
+```
+
+
+```{r}
+#install.packages("VIM")
+#install.packages("naniar")
+#install.packages("missMDA")
+#install.packages("Amelia")
+#install.packages("mice")
+#install.packages("missForest")
+#install.packages("FactoMineR")
+#install.packages("Tidyverse")
+#install.packages("devtools")
+library(devtools)
+#install_github("cran/BaylorEdPsych")      for MCAR testing
+library(BaylorEdPsych)
+```
+
+Checking for total number of complete observations
+```{r}
+dim(na.omit(trainingDF))
+```
+```{r}
+library(naniar)
+gg_miss_var(trainingDF)
+```
+
+Creating a missingness matrix for non-ignorable missing variables.
+```{r}
+trainingDF_miss_filled<-trainingDF
+trainingDF_miss_filled[!is.na(trainingDF_miss_filled$health_insurance),'health_insurance']<-'Present'
+trainingDF_miss_filled[is.na(trainingDF_miss_filled$health_insurance),'health_insurance']<-'Missing'
+trainingDF_miss_filled[!is.na(trainingDF_miss_filled$doctor_recc_h1n1),'doctor_recc_h1n1']<-'Present'
+trainingDF_miss_filled[is.na(trainingDF_miss_filled$doctor_recc_h1n1),'doctor_recc_h1n1']<-'Missing'
+trainingDF_miss_filled[!is.na(trainingDF_miss_filled$doctor_recc_seasonal),'doctor_recc_seasonal']<-'Present'
+trainingDF_miss_filled[is.na(trainingDF_miss_filled$doctor_recc_seasonal),'doctor_recc_seasonal']<-'Missing'
+```
+
+Testing association of missingness in health insurance with other variables
+```{r}
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$h1n1_vaccine)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$seasonal_vaccine)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$h1n1_concern)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$h1n1_knowledge)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_antiviral_meds)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_avoidance)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_face_mask)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_wash_hands)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_large_gatherings)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_outside_home)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$behavioral_touch_face)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$doctor_recc_h1n1)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$doctor_recc_seasonal)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$chronic_med_condition)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$child_under_6_months)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$health_worker)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$opinion_h1n1_vacc_effective)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$opinion_h1n1_risk)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$opinion_h1n1_sick_from_vacc)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$opinion_seas_risk)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$opinion_seas_sick_from_vacc)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$age_group)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$education)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$race)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$race)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$sex)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$income_poverty)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$marital_status)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$rent_or_own)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$employment_status)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$hhs_geo_region)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$census_msa)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$household_adults)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$household_children)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$employment_industry)
+chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$employment_occupation)
+```
+
+Results show that missingness is not MCAR. It could either be MAR or MNAR. The test also tells us that the missingness can have a significant effect on the outcome.
+
+```{r}
+ggplot(trainingDF_miss_filled, 
+       aes(x = h1n1_vaccine, 
+           fill = health_insurance)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proportion") +theme_bw()
+```
+
+```{r}
+ggplot(trainingDF_miss_filled, 
+       aes(x = h1n1_vaccine, 
+           fill = health_insurance)) + 
+  geom_bar(position = position_dodge(preserve = "single")) +theme_bw()
+
+```
+
+The figure above shows that those with missing health insurance information are less likely to get vaccinated. However, the effect seems to be reverse. That is, those who did not get vaccinated had about the same likelihood of missingness, however, those who did get vaccinated had a much lower chance of (more than 50% less) of having missing data in health insurance. Given that the statistical significance of this trend is exactly same in other variables which have missing data, it seems this also applies to the other variables. Thus, given this trend, it appears the missing data points for the health insurance variable appears to be missing at random, being conditional on covariates, especially with H1N1 vaccination. A similar but much less dramatic effect is seen for seasonal_vaccination as well. Thus, it may have been the case that much focus was placed on H1N1_compliant respondents to ensure they had complete data, but not so much for seasonal vaccination.
+
+```{r}
+ggplot(trainingDF_miss_filled, 
+       aes(x = seasonal_vaccine, 
+           fill = health_insurance)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proportion") +theme_bw()
+```
+
+The missingness plot above shows that 3 variables (health_insurance (45.96), doctor_recc_h1n1 (8.09), and doctors_recc_seasonal(8.09)) have missingness above 5% and an additional 3 (health_worker(3.01%), child_under_6months(3.07%), chronic_med_condition(3.64%)) have missigness above 3%. Thus, following Graham’s (2009) recommendation, we would ignore missingness below 5% (via deletion of incomplete cases for those variables).
+Thus, only health_insurance (45.96), doctors_recc_h1n1 (8.09), and doctors_recc_seasonal(8.09) were further analysed for missingness.
+
+Testing association of missingness in doctor_recc_h1n1 with other variables
+```{r}
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$h1n1_vaccine)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$seasonal_vaccine)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$h1n1_concern)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$h1n1_knowledge)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_antiviral_meds)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_avoidance)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_face_mask)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_wash_hands)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_large_gatherings)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_outside_home)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$behavioral_touch_face)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$health_insurance)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$doctor_recc_seasonal)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$chronic_med_condition)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$child_under_6_months)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$health_worker)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$opinion_h1n1_vacc_effective)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$opinion_h1n1_risk)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$opinion_h1n1_sick_from_vacc)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$opinion_seas_risk)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$opinion_seas_sick_from_vacc)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$age_group)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$education)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$race)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$race)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$sex)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$income_poverty)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$marital_status)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$rent_or_own)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$employment_status)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$hhs_geo_region)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$census_msa)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$household_adults)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$household_children)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$employment_industry)
+chisq.test(trainingDF_miss_filled$doctor_recc_h1n1, trainingDF_miss_filled$employment_occupation)
+```
+
+Ina similar way, missingness in the doctor_recc_h1n1 variable was most strongly associated with H1N1 and seasonal vaccination. Since every observation that had missing values for doctor_recc_H1N1 also did for doctor_recc_seasonal, the same conclusion can be made for the latter.
+
+Given that the evidence is suggesting that the missingness mechanism is MAR, we will explore both model-based and random imputation for these variables, using multiple imputation, and compare our final performance with the complete case scenario.
+
+```{r}
+#install.packages("VIM")
+#install.packages("naniar")
+#install.packages("missMDA")
+#install.packages("Amelia")
+#install.packages("mice")
+#install.packages("missForest")
+#install.packages("FactoMineR")
+#install.packages("Tidyverse")
+```
+
+```{r}
+library(VIM)
+library(naniar)
+library(missMDA)
+library(Amelia)
+library(mice)
+library(missForest)
+library(FactoMineR)
+library(tidyverse)
+```
+#converting dataframe to factors because MCA requires all vvariables to be factors.
+```{r}
+trainingDF_miss_filled <- lapply(trainingDF_miss_filled, factor) 
+```
+
+Separate data from labels
+```{r}
+train_factor<- lapply(trainingDF, factor) 
+labels<-train_factor %>% as.data.frame() %>% transmute(.,h1n1=h1n1_vaccine, seasonal=seasonal_vaccine)
+train_factor<- train_factor %>% as.data.frame() %>% select(., !c(seasonal_vaccine,h1n1_vaccine, respondent_id))
+```
+
+Now doing MCA (multiple correspondence analysis)
+```{r}
+#train.MCA <- MCA(trainingDF_miss_filled, quali.sup = c(7:11))
+```
+
+Now carrying out single imputation using using random forest model with 6 iterations.
+```{r}
+#trainingDF<-trainingDF %>% select(., !c(seasonal_vaccine,h1n1_vaccine, respondent_id))
+res.rf <- missForest(as.data.frame(train_factor))
+train.rf.imp<- res.rf$ximp
+```
+
+```{r}
+
+pmiss.rf <- vis_miss(train.rf.imp, warn_large_data = FALSE) +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, angle=0), axis.title = element_text(size=8), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+   coord_flip()
+pmiss.rf
+```
+
+Now. let's try imputing by random for health insurance.
+```{r}
+set.seed(123)
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'health_insurance'])
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'health_insurance'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'health_insurance'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'health_insurance'])
+
+library(caTools)
+ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$health_insurance))
+ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$health_insurance))
+ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$health_insurance))
+ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$health_insurance))
+
+samp1<-sample.split(ind1,SplitRatio = 0.19)
+samp2<-sample.split(ind2,SplitRatio = 0.13)
+samp3<-sample.split(ind3,SplitRatio = 0.064)
+samp4<-sample.split(ind4,SplitRatio = 0.046)
+
+false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
+training.random<-trainingDF
+training.random[false.indices,'health_insurance']<-FALSE
+training.random[!false.indices,'health_insurance']<-TRUE
+```
+
+Random imputation for doctor's recc seasonal
+```{r}
+set.seed(123)
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_seasonal'])
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_seasonal'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_seasonal'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_seasonal'])
+
+library(caTools)
+ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_seasonal))
+ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_seasonal))
+ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_seasonal))
+ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_seasonal))
+
+samp1<-sample.split(ind1,SplitRatio = 0.84)
+samp2<-sample.split(ind2,SplitRatio = 0.766)
+samp3<-sample.split(ind3,SplitRatio = 0.526)
+samp4<-sample.split(ind4,SplitRatio = 0.429)
+
+false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
+training.random<-trainingDF
+training.random[false.indices,'doctor_recc_seasonal']<-FALSE
+training.random[!false.indices,'doctor_recc_seasonal']<-TRUE
+```
+
+```{r}
+set.seed(123)
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_h1n1'])
+table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_h1n1'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_h1n1'])
+table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_h1n1'])
+
+library(caTools)
+ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_h1n1))
+ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_h1n1))
+ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_h1n1))
+ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_h1n1))
+
+samp1<-sample.split(ind1,SplitRatio = 0.883)
+samp2<-sample.split(ind2,SplitRatio = 0.547)
+samp3<-sample.split(ind3,SplitRatio = 0.842)
+samp4<-sample.split(ind4,SplitRatio = 0.46)
+
+false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
+training.random<-trainingDF
+training.random[false.indices,'doctor_recc_h1n1']<-FALSE
+training.random[!false.indices,'doctor_recc_h1n1']<-TRUE
+```
+
+Split training set into train and test sets.
+```{r}
+#Splitting for rf model
+smp_size <- floor(0.75 * nrow(train.rf.imp))
+train_ind <- sample(seq_len(nrow(train.rf.imp)), size = smp_size)
+X.rf_train <- train.rf.imp[train_ind, ]
+X.rf_test <- train.rf.imp[-train_ind, ]
+y.rf_train = labels[train_ind,]
+y.rf_test= labels[-train_ind,]
+
+X.rand_train <- training.random[train_ind, ]
+X.rand_test <- training.random[-train_ind, ]
+y.rand_train = labels[train_ind,]
+y.rand_test= labels[-train_ind,]
+```
+
