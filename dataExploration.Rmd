@@ -298,12 +298,7 @@ p1 <- ggplot(missingnessDF, aes(y=cols, x=vals)) +
      xlab("employment industry")
 p1
 ```
-### Correlation Plot
 
-```{r, fig.align='center', error=TRUE}
-corr <- mixedCor(data=trainingDF,d=c("behavioral_antiviral_meds","behavioral_avoidance","behavioral_face_mask","behavioral_wash_hands","behavioral_large_gatherings","behavioral_outside_home","behavioral_touch_face","doctor_recc_h1n1","doctor_recc_seasonal","chronic_med_condition","child_under_6_months","health_worker","health_insurance","h1n1_vaccine","seasonal_vaccine","sex_num"), p=c("h1n1_concern","h1n1_knowledge","opinion_h1n1_vacc_effective","opinion_h1n1_risk","opinion_h1n1_sick_from_vacc","opinion_seas_vacc_effective","opinion_seas_risk","opinion_seas_sick_from_vacc","household_adults","household_children"))
-corrplot(corr$rho, order="hclust", method="circle", type="upper", tl.cex=0.7,number.cex=0.5)
-```
 ### Training Feature Plots 
 ```{r fig.align='center'}
 trainingDF <- trainingDF %>%
@@ -705,11 +700,20 @@ train_factor<- train_factor %>% as.data.frame() %>% select(., !c(seasonal_vaccin
 Now doing MCA (multiple correspondence analysis)
 ```{r}
 #train.MCA <- MCA(trainingDF_miss_filled, quali.sup = c(7:11))
+summary(train_factor)
 ```
 
 Now carrying out single imputation using using random forest model with 6 iterations.
 ```{r}
 #trainingDF<-trainingDF %>% select(., !c(seasonal_vaccine,h1n1_vaccine, respondent_id))
+train_factor$employment_occupation = as.character(train_factor$employment_occupation)
+train_factor$employment_status = as.character(train_factor$employment_status)
+train_factor$employment_industry = as.character(train_factor$employment_industry)
+train_factor[train_factor$employment_status%in%c("Not in Labor Force","Unemployed")&train_factor$employment_occupation=="",c("employment_occupation", "employment_industry")] <- "Unemployed"
+train_factor$employment_occupation = as.factor(train_factor$employment_occupation)
+train_factor$employment_status = as.factor(train_factor$employment_status)
+train_factor$employment_industry = as.factor(train_factor$employment_industry)
+
 res.rf <- missForest(as.data.frame(train_factor))
 train.rf.imp<- res.rf$ximp
 ```
@@ -722,79 +726,46 @@ pmiss.rf <- vis_miss(train.rf.imp, warn_large_data = FALSE) +
 pmiss.rf
 ```
 
-Now. let's try imputing by random for health insurance.
+
+Now. let's try imputing by random for all missing data points based on outcome group frequency.
 ```{r}
-set.seed(123)
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'health_insurance'])
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'health_insurance'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'health_insurance'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'health_insurance'])
-
-library(caTools)
-ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$health_insurance))
-ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$health_insurance))
-ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$health_insurance))
-ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$health_insurance))
-
-samp1<-sample.split(ind1,SplitRatio = 0.19)
-samp2<-sample.split(ind2,SplitRatio = 0.13)
-samp3<-sample.split(ind3,SplitRatio = 0.064)
-samp4<-sample.split(ind4,SplitRatio = 0.046)
-
-false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
 training.random<-trainingDF
-training.random[false.indices,'health_insurance']<-FALSE
-training.random[!false.indices,'health_insurance']<-TRUE
+for (var in names(training.random)){
+   set.seed(123)
+   print(var)
+   if (sum(is.na(training.random[[var]])>0)){
+      frac1=length(training.random[training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==FALSE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
+      frac2=length(training.random[training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==TRUE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
+      frac3=length(training.random[training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==FALSE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
+      frac4=length(training.random[training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==TRUE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
+      
+      library(caTools)
+      ind1<-which(training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==FALSE&is.na(training.random[[var]]))
+      ind2<-which(training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==TRUE&is.na(training.random[[var]]))
+      ind3<-which(training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==FALSE&is.na(training.random[[var]]))
+      ind4<-which(training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==TRUE&is.na(training.random[[var]]))
+      
+      samp1<-sample.split(ind1,SplitRatio = frac1)
+      samp2<-sample.split(ind2,SplitRatio = frac2)
+      samp3<-sample.split(ind3,SplitRatio = frac3)
+      samp4<-sample.split(ind4,SplitRatio = frac4)
+      
+      false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
+      training.random[false.indices&is.na(training.random[[var]]),var]<-FALSE
+      training.random[!false.indices&is.na(training.random[[var]]),var]<-TRUE
+      print('done')
+   }
+}
 ```
 
-Random imputation for doctor's recc seasonal
+Confirm that imputation has occured
 ```{r}
-set.seed(123)
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_seasonal'])
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_seasonal'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_seasonal'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_seasonal'])
-
-library(caTools)
-ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_seasonal))
-ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_seasonal))
-ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_seasonal))
-ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_seasonal))
-
-samp1<-sample.split(ind1,SplitRatio = 0.84)
-samp2<-sample.split(ind2,SplitRatio = 0.766)
-samp3<-sample.split(ind3,SplitRatio = 0.526)
-samp4<-sample.split(ind4,SplitRatio = 0.429)
-
-false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
-training.random<-trainingDF
-training.random[false.indices,'doctor_recc_seasonal']<-FALSE
-training.random[!false.indices,'doctor_recc_seasonal']<-TRUE
+pmiss.rand <- vis_miss(training.random, warn_large_data = FALSE) +
+      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, angle=0), axis.title = element_text(size=8), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+   coord_flip()
+pmiss.rand
 ```
 
-```{r}
-set.seed(123)
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_h1n1'])
-table(trainingDF[trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_h1n1'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE,'doctor_recc_h1n1'])
-table(trainingDF[trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE,'doctor_recc_h1n1'])
-
-library(caTools)
-ind1<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_h1n1))
-ind2<-which(trainingDF$seasonal_vaccine==FALSE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_h1n1))
-ind3<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==FALSE&is.na(trainingDF$doctor_recc_h1n1))
-ind4<-which(trainingDF$seasonal_vaccine==TRUE& trainingDF$h1n1_vaccine==TRUE&is.na(trainingDF$doctor_recc_h1n1))
-
-samp1<-sample.split(ind1,SplitRatio = 0.883)
-samp2<-sample.split(ind2,SplitRatio = 0.547)
-samp3<-sample.split(ind3,SplitRatio = 0.842)
-samp4<-sample.split(ind4,SplitRatio = 0.46)
-
-false.indices=c(ind1[samp1==TRUE], ind2[samp2==TRUE], ind3[samp3==TRUE], ind4[samp4==TRUE])
-training.random<-trainingDF
-training.random[false.indices,'doctor_recc_h1n1']<-FALSE
-training.random[!false.indices,'doctor_recc_h1n1']<-TRUE
-```
 
 Split training set into train and test sets.
 ```{r}
