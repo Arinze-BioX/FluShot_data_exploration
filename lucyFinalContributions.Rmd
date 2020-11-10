@@ -1,0 +1,300 @@
+---
+title: "lucyFinalContributions"
+author: "Lucy Chikwetu"
+date: "11/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(patchwork)
+library(gridExtra)
+library(psych)
+library(corrplot)
+library(ggfortify)
+library(factoextra)
+library(class) #knn
+library(gmodels) # CrossTable()
+library(caret) # creatFolds()
+library(caTools) #sample.split()
+library(ROCR) # prediction(), performance()
+
+library(psych) # pairs.panels()
+library(leaps) # regsubsets()
+library(glmnet) # glmnet(), cv.glmnet(), predict()
+library(plyr)
+library(missForest)
+
+set.seed(123)
+```
+
+## Reading the Data
+```{r, echo=FALSE}
+subFormat = read.csv("submission_format.csv", header = TRUE)
+tef_data = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trf_data = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trl_data = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+testFeatures = data.frame(tef_data)
+trainingFeatures = data.frame(trf_data)
+trainingLabels = data.frame(trl_data)
+```
+
+### Merging training data 
+```{r}
+trainingDF = trainingFeatures
+trainingDF$h1n1_vaccine = trainingLabels$h1n1_vaccine
+trainingDF$seasonal_vaccine = trainingLabels$seasonal_vaccine
+```
+### Checking Unique Values for Factors
+* <span style="color:blue">Age Group</span>
+```{r}
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "55 - 64 Years"] = "55-64"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "35 - 44 Years"] = "35-44"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "18 - 34 Years"] = "18-34"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "65+ Years"] = "65+"
+levels(trainingDF$age_group)[levels(trainingDF$age_group) == "45 - 54 Years"] = "45-54"
+```
+
+* <span style="color:blue">Education</span>
+```{r}
+levels(trainingDF$education)[levels(trainingDF$education) == "College Graduate"] = "Grad"
+levels(trainingDF$education)[levels(trainingDF$education) == "Some College"] = "College"
+levels(trainingDF$education)[levels(trainingDF$education) == "< 12 Years"] = "<12 Yrs"
+levels(trainingDF$education)[levels(trainingDF$education) == "12 Years"] = "12 Yrs"
+```
+
+* <span style="color:blue">Race</span>
+```{r}
+levels(trainingDF$race)[levels(trainingDF$race) == "Other or Multiple"] = "Other"
+```
+
+* <span style="color:blue">Sex</span>
+```{r}
+unique(trainingDF["sex"])
+```
+* <span style="color:blue">Income Poverty</span>
+```{r}
+levels(trainingDF$income_poverty)[levels(trainingDF$income_poverty) == "<= $75,000, Above Poverty"] = "<=75K"
+levels(trainingDF$income_poverty)[levels(trainingDF$income_poverty) == "> $75,000"] = ">75K"
+```
+
+* <span style="color:blue">Marital Status</span>
+```{r}
+unique(trainingDF["marital_status"])
+```
+* <span style="color:blue">Rent or Own</span>
+```{r}
+unique(trainingDF["rent_or_own"])
+```
+* <span style="color:blue">Employment Status</span>
+```{r}
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Not in Labor Force"] = "~Labor"
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Employed"] = "Emp"
+levels(trainingDF$employment_status)[levels(trainingDF$employment_status) == "Unemployed"] = "unEmp"
+```
+
+* <span style="color:blue">HHS Geographical Region</span>
+```{r}
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "oxchjgsf"] = "A"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "bhuqouqj"] = "B"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "qufhixun"] = "C"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "lrircsnp"] = "D"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "atmpeygn"] = "E"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "lzgpxyit"] = "F"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "fpwskwrf"] = "G"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "mlyzmhmf"] = "H"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "dqpwygqj"] = "I"
+levels(trainingDF$hhs_geo_region)[levels(trainingDF$hhs_geo_region) == "kbazzjca"] = "J"
+```
+
+* <span style="color:blue">Census MSA</span>
+```{r}
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "Non-MSA"] = "Non"
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "MSA, Principle City"] = "Principle"
+levels(trainingDF$census_msa)[levels(trainingDF$census_msa) == "MSA, Not Principle  City"] = "Not Principle"
+```
+
+* <span style="color:blue">Employment Industry</span>
+```{r}
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "pxcmvdjn"] = "a"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "rucpziij"] = "b"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "wxleyezf"] = "c"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "saaquncn"] = "d"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "xicduogh"] = "e"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "ldnlellj"] = "f"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "wlfvacwt"] = "g"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "nduyfdeo"] = "h"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "fcxhlnwr"] = "i"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "vjjrobsf"] = "j"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "arjwrbjb"] = "k"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "atmlpfrs"] = "l"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "msuufmds"] = "m"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "xqicxuve"] = "n"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "phxvnwax"] = "o"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "dotnnunm"] = "p"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "mfikgejo"] = "q"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "cfqqtusy"] = "r"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "mcubkhph"] = "s"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "qnlwzans"] = "t"
+levels(trainingDF$employment_industry)[levels(trainingDF$employment_industry) == "haxffmxo"] = "u"
+```
+
+* <span style="color:blue">Employment Occupation</span>
+```{r}
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xgwztkwe"] = "a"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xtkaffoo"] = "b"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "emcorrxb"] = "c"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "vlluhbov"] = "d"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xqwwgdyp"] = "e"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "ccgxvspp"] = "f"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "qxajmpny"] = "g"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "kldqjyjy"] = "h"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "mxkfnird"] = "i" 
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "hfxkjkmi"] = "j"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "bxpfxfdn"] = "k"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "ukymxvdu"] = "l"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "cmhcxjea"] = "m"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "haliazsg"] = "n"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "dlvbwzss"] = "o"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "xzmlyyjv"] = "p"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "oijqvulv"] = "q"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "rcertsgn"] = "r"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "tfqavkke"] = "s"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "hodpvpew"] = "t"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "uqqtjvyb"] = "u"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "pvmttkik"] = "v"
+levels(trainingDF$employment_occupation)[levels(trainingDF$employment_occupation) == "dcjcmpih"] = "w"
+```
+
+* <span style="color:blue">Household Children</span>
+```{r}
+unique(trainingFeatures["household_children"])
+```
+* <span style="color:blue">Household Adults</span>
+```{r}
+unique(trainingFeatures["household_adults"])
+```
+```{r}
+unique(trainingDF["h1n1_vaccine"])
+```
+### Data Transformation
+```{r}
+trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
+                        h1n1_concern = as.integer(h1n1_concern),
+                        h1n1_knowledge = as.integer(h1n1_knowledge),
+                        behavioral_antiviral_meds = as.logical(behavioral_antiviral_meds),
+                        behavioral_avoidance = as.logical(behavioral_avoidance),
+                        behavioral_face_mask = as.logical(behavioral_face_mask),
+                        behavioral_wash_hands = as.logical(behavioral_wash_hands),
+                        behavioral_large_gatherings = as.logical(behavioral_large_gatherings),
+                        behavioral_outside_home = as.logical(behavioral_outside_home),
+                        behavioral_touch_face = as.logical(behavioral_touch_face),
+                        doctor_recc_h1n1 = as.logical(doctor_recc_h1n1),
+                        doctor_recc_seasonal = as.logical(doctor_recc_seasonal),
+                        chronic_med_condition = as.logical(chronic_med_condition),
+                        child_under_6_months = as.logical(child_under_6_months),
+                        health_worker = as.logical(health_worker),
+                        health_insurance = as.factor(health_insurance),
+                        sex = as.factor(sex),
+                        h1n1_vaccine = as.logical(h1n1_vaccine),
+                        seasonal_vaccine = as.logical(seasonal_vaccine),
+                        rent_or_own = as.factor(rent_or_own),
+                        marital_status = as.factor(marital_status),
+                        opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
+                        opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
+                        opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
+                        opinion_seas_vacc_effective = as.integer(opinion_seas_vacc_effective),
+                        opinion_seas_risk = as.integer(opinion_seas_risk),
+                        opinion_seas_sick_from_vacc = as.integer(opinion_seas_sick_from_vacc),
+                        age_group = as.factor(age_group),
+                        education = as.factor(education),
+                        race = as.factor(race),
+                        income_poverty = as.factor(income_poverty),
+                        employment_status = as.factor(employment_status),
+                        hhs_geo_region = as.factor(hhs_geo_region),
+                        census_msa = as.factor(census_msa),
+                        household_adults = as.integer(household_adults),
+                        household_children = as.integer(household_children),
+                        employment_industry = as.factor(employment_industry),
+                        employment_occupation = as.factor(employment_occupation))
+```
+
+## Complete-case scenario 
+```{r}
+completeCases <- trainingDF[complete.cases(trainingDF),]
+glimpse(completeCases)
+```
+
+## Make missingness a category in health insurance
+```{r}
+randImp <- trainingDF
+randImp$respondent_id <- NULL
+levels(randImp$health_insurance)[levels(randImp$health_insurance) == "0"] = "None"
+levels(randImp$health_insurance)[levels(randImp$health_insurance) == "1"] = "Present"
+levels(randImp$health_insurance) = c("None","Present","Missing")
+randImp[is.na(randImp$health_insurance),'health_insurance'] <- 'Missing'
+#glimpse(randImp)
+#summary(randImp$health_insurance)
+```
+
+## Imputation using most frequent category
+```{r}
+for (i in names(randImp)){
+  # Get arrays of missing values
+  missing00 <- which(is.na(randImp[i]) & randImp$h1n1_vaccine == FALSE & randImp$seasonal_vaccine == FALSE  )
+  missing01 <- which(is.na(randImp[i]) & randImp$h1n1_vaccine == FALSE & randImp$seasonal_vaccine == TRUE  )
+  missing10 <- which(is.na(randImp[i]) & randImp$h1n1_vaccine == TRUE & randImp$seasonal_vaccine == FALSE  )
+  missing11 <- which(is.na(randImp[i]) & randImp$h1n1_vaccine == TRUE & randImp$seasonal_vaccine == TRUE  )
+
+  # Get most frequent values
+  freq00 <- randImp[which.max(!is.na(randImp[i]) & randImp$h1n1_vaccine == FALSE & randImp$seasonal_vaccine == FALSE), i]
+  freq01 <- randImp[which.max(!is.na(randImp[i]) & randImp$h1n1_vaccine == FALSE & randImp$seasonal_vaccine == TRUE), i]
+  freq10 <- randImp[which.max(!is.na(randImp[i]) & randImp$h1n1_vaccine == TRUE & randImp$seasonal_vaccine == FALSE), i]
+  freq11 <- randImp[which.max(!is.na(randImp[i]) & randImp$h1n1_vaccine == TRUE & randImp$seasonal_vaccine == TRUE), i]
+
+  # Now we replace the values 
+  randImp[missing00,i] <- freq00
+  randImp[missing01,i] <- freq01
+  randImp[missing10,i] <- freq10
+  randImp[missing11,i] <- freq11
+}
+```
+
+## Model Imputation 
+```{r}
+set.seed(123)
+modelImp <- trainingDF
+modelImp$respondent_id <- NULL
+levels(modelImp$health_insurance)[levels(modelImp$health_insurance) == "0"] = "None"
+levels(modelImp$health_insurance)[levels(modelImp$health_insurance) == "1"] = "Present"
+levels(modelImp$health_insurance) = c("None","Present","Missing")
+modelImp[is.na(modelImp$health_insurance),'health_insurance'] <- 'Missing'
+
+modelImp <- missForest(modelImp)
+summary(modelImp)
+```
+
+## Splitting the data to 75:25
+```{r}
+set.seed(123)
+sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.75)
+cc_train_df <- subset(completeCases,sample == TRUE)
+cc_test_df <- subset(completeCases, sample == FALSE)
+
+
+rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.75)
+rand_train_df <- subset(randImp,rand_sample == TRUE)
+rand_test_df <- subset(randImp, rand_sample == FALSE)
+
+glimpse(modelImp)
+modelImp <- sample.split(modelImp$h1n1_vaccine,SplitRatio = 0.75)
+model_train_df <- subset(modelImp,rand_sample == TRUE)
+model_test_df <- subset(modelImp, rand_sample == FALSE)
+glimpse(model_train_df)
+glimpse(model_test_df)
+
+```
+
