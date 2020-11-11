@@ -15,6 +15,8 @@ library(corrplot)
 library(dplyr)
 library(tidyverse)
 library(ggplot2)
+library(rpart)
+library(mgcv)
 ```
 
 # Exploratory Analysis
@@ -51,7 +53,7 @@ transform(vac_df, respondent_id = as.factor(respondent_id),
           chronic_med_condition = as.logical(chronic_med_condition),
           child_under_6_months = as.logical(child_under_6_months),
           health_worker = as.logical(health_worker),
-          health_insurance = as.logical(health_insurance),
+          health_insurance = as.factor(health_insurance),
           opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
           opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
           opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
@@ -195,11 +197,132 @@ vac_df[vac_df$employment_status%in%c("Not in Labor Force","Unemployed")&vac_df$e
 vac_df$employment_occupation = as.factor(vac_df$employment_occupation)
 vac_df$employment_status = as.factor(vac_df$employment_status)
 vac_df$employment_industry = as.factor(vac_df$employment_industry)
+vac_complete$h1n1_vaccine <- as.factor(vac_complete$h1n1_vaccine)
+vac_complete$seasonal_vaccine <- as.factor(vac_complete$seasonal_vaccine)
+
 ```
 
 Now seeing the summary:
 ```{r}
 summary(vac_df)
 ```
+
+## Missingness as Factor for Health Insurance
+
+```{r}
+vac_df[vac_df$health_insurance%in%c("", NA),c("health_insurance")] <- "Unknown"
+vac_df
+```
+
+```{r}
+vac_df$health_insurance <- as.factor(vac_df$health_insurance)
+vac_df
+```
+
+```{r}
+summary(vac_df)
+```
+
+Complete cases after health_insurance factorization:
+```{r}
+vac_complete <- vac_df[complete.cases(vac_df), ]
+summary(vac_complete)
+```
+
+Create "Unknown" factor within education, income_poverty, marital_status, rent_or_own, employment_status:
+```{r}
+vac_complete[vac_complete$education%in%c("", " ",NA),c("education")] <- "Unknown"
+vac_complete[vac_complete$income_poverty%in%c("", " ", NA),c("income_poverty")] <- "Unknown"
+vac_complete[vac_complete$marital_status%in%c("", " ", NA),c("marital_status")] <- "Unknown"
+vac_complete[vac_complete$rent_or_own%in%c("", " ", NA),c("rent_or_own")] <- "Unknown"
+vac_complete[vac_complete$employment_status%in%c("", " ", NA),c("employment_status")] <- "Unknown"
+
+vac_complete$education <- as.factor(vac_complete$education)
+vac_complete$income_poverty <- as.factor(vac_complete$income_poverty)
+vac_complete$marital_status <- as.factor(vac_complete$marital_status)
+vac_complete$rent_or_own <- as.factor(vac_complete$rent_or_own)
+vac_complete$employment_status <- as.factor(vac_complete$employment_status)
+
+summary(vac_complete)
+```
+
+```{r}
+vac_complete$h1n1_vaccine <- as.factor(vac_complete$h1n1_vaccine)
+vac_complete$seasonal_vaccine <- as.factor(vac_complete$seasonal_vaccine)
+head(vac_complete, 30)
+```
+
+## Decision Tree
+
+Create subsets that contain only one output:
+```{r}
+vac_com_h1n1 <- subset(vac_complete, select = -c(seasonal_vaccine))
+vac_com_seas <- subset(vac_complete, select = -c(h1n1_vaccine))
+```
+
+Build the h1n1 tree:
+```{r}
+tree_obj <- rpart(data = vac_com_h1n1, formula = h1n1_vaccine ~ .)
+```
+
+Plot results:
+```{r}
+plot(tree_obj)
+summary(tree_obj)
+text(tree_obj)
+
+plotcp(tree_obj)
+printcp(tree_obj)
+
+rsq.rpart(tree_obj)
+title("R-Squared vs. #Features")
+```
+Build the seas tree:
+```{r}
+tree_obj2 <- rpart(data = vac_com_seas, formula = seasonal_vaccine ~ .)
+```
+
+Plot the results:
+```{r}
+plot(tree_obj2)
+text(tree_obj2)
+
+plotcp(tree_obj2)
+printcp(tree_obj2)
+
+rsq.rpart(tree_obj2)
+title("R-Squared vs. #Features")
+
+post(tree_obj, file = "Post_Tree")
+```
+
+Now to find importance
+
+
+
+## LASSO for feature selection:
+
+## GAM
+
+```{r}
+gam_obj <- gam(data = vac_com_h1n1, formula = h1n1_vaccine ~ .)
+```
+
+## Deletion of health insurance with mode/mean imputed
+
+```{r}
+vac_deleted_hi <- subset(vac_df, select = -c(health_insurance))
+```
+
+Now to impute using mean of each column:
+```{r}
+
+```
+
+## Writing post-imputated dataframes to .csv:
+```{r}
+write.csv(vac_complete, file = "HI_factor_compcase_rest.csv")
+```
+
 
 # End of Exploratory Analysis
