@@ -224,8 +224,10 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 
 ## Complete-case scenario 
 ```{r}
-completeCases <- trainingDF[complete.cases(trainingDF),]
-completeCases$respondent_id <- NULL
+#-----MAKE CHANGES HERE-------!
+
+#completeCases <- trainingDF[complete.cases(trainingDF),]
+#completeCases$respondent_id <- NULL
 
 # Nick Completecase & Unknown
 #completeCases <- read.csv("nickCompleteCase.csv",header=TRUE, stringsAsFactors = TRUE)
@@ -234,8 +236,8 @@ completeCases$respondent_id <- NULL
 #completeCases$respondent_id <- NULL
 
 # Arinze 
-#completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
-#completeCases$X <- NULL
+completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
+completeCases$X <- NULL
 
 glimpse(completeCases)
 
