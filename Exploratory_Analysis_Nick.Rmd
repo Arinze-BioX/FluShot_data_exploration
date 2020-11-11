@@ -197,8 +197,8 @@ vac_df[vac_df$employment_status%in%c("Not in Labor Force","Unemployed")&vac_df$e
 vac_df$employment_occupation = as.factor(vac_df$employment_occupation)
 vac_df$employment_status = as.factor(vac_df$employment_status)
 vac_df$employment_industry = as.factor(vac_df$employment_industry)
-vac_complete$h1n1_vaccine <- as.factor(vac_complete$h1n1_vaccine)
-vac_complete$seasonal_vaccine <- as.factor(vac_complete$seasonal_vaccine)
+vac_df$h1n1_vaccine <- as.factor(vac_df$h1n1_vaccine)
+vac_df$seasonal_vaccine <- as.factor(vac_df$seasonal_vaccine)
 
 ```
 
@@ -292,8 +292,6 @@ printcp(tree_obj2)
 
 rsq.rpart(tree_obj2)
 title("R-Squared vs. #Features")
-
-post(tree_obj, file = "Post_Tree")
 ```
 
 Now to find importance
@@ -305,7 +303,7 @@ Now to find importance
 ## GAM
 
 ```{r}
-gam_obj <- gam(data = vac_com_h1n1, formula = h1n1_vaccine ~ .)
+
 ```
 
 ## Deletion of health insurance with mode/mean imputed
@@ -319,9 +317,20 @@ Now to impute using mean of each column:
 
 ```
 
+## Unknown for all missing cells:
+```{r}
+vac_unknown <- vac_df
+vac_unknown[is.na(vac_unknown)] <- "Unknown"
+
+summary(vac_unknown)
+head(vac_unknown, 10)
+```
+
+
 ## Writing post-imputated dataframes to .csv:
 ```{r}
 write.csv(vac_complete, file = "HI_factor_compcase_rest.csv")
+write.csv(vac_unknown, file = "Unknown_for_all_categories.csv")
 ```
 
 

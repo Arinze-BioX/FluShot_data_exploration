@@ -45,7 +45,7 @@ build_tree <- function(x) {
   min_cp_h1n1 <- tree_obj$cptable[which.min(tree_obj$cptable[,"xerror"]),"CP"]
   tree_obj <- rpart(data = vac_com_h1n1, formula = h1n1_vaccine ~ ., method = "class", minsplit = 10, cp = min_cp_h1n1)
   
-  plot(tree_obj)
+  plot(tree_obj, margin = 0.2)
   title("Decision Tree H1N1")
   summary(tree_obj)
   text(tree_obj)
@@ -62,7 +62,7 @@ build_tree <- function(x) {
   
   tree_obj2$variable.importance
   
-  plot(tree_obj2)
+  plot(tree_obj2, margin = 0.2)
   title("Decision Tree Seasonal")
   summary(tree_obj2)
   text(tree_obj2)
@@ -94,7 +94,12 @@ abline(0,1,lty = 2)
 
 auc_ROCR <- performance(pred, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR 
+auc_ROCR
+
+accuracy <- performance(pred, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 Tree_a ROC seasonal:
@@ -108,6 +113,11 @@ abline(0,1,lty = 2)
 auc_ROCR <- performance(pred2, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
 auc_ROCR
+
+accuracy <- performance(pred2, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 
@@ -126,7 +136,12 @@ abline(0,1,lty = 2)
 
 auc_ROCR <- performance(pred, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR 
+auc_ROCR
+
+accuracy <- performance(pred, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 
@@ -141,6 +156,11 @@ abline(0,1,lty = 2)
 auc_ROCR <- performance(pred2, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
 auc_ROCR
+
+accuracy <- performance(pred2, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 Tree_c:
@@ -158,7 +178,12 @@ abline(0,1,lty = 2)
 
 auc_ROCR <- performance(pred, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR 
+auc_ROCR
+
+accuracy <- performance(pred, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 
@@ -173,6 +198,11 @@ abline(0,1,lty = 2)
 auc_ROCR <- performance(pred2, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
 auc_ROCR
+
+accuracy <- performance(pred2, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 Tree_d:
@@ -190,7 +220,12 @@ abline(0,1,lty = 2)
 
 auc_ROCR <- performance(pred, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR 
+auc_ROCR
+
+accuracy <- performance(pred, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 
@@ -205,6 +240,11 @@ abline(0,1,lty = 2)
 auc_ROCR <- performance(pred2, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
 auc_ROCR
+
+accuracy <- performance(pred2, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 Tree_e:
@@ -222,7 +262,12 @@ abline(0,1,lty = 2)
 
 auc_ROCR <- performance(pred, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
-auc_ROCR 
+auc_ROCR
+
+accuracy <- performance(pred, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
 
@@ -237,6 +282,56 @@ abline(0,1,lty = 2)
 auc_ROCR <- performance(pred2, measure = "auc")
 auc_ROCR <- auc_ROCR@y.values[[1]]
 auc_ROCR
+
+accuracy <- performance(pred2, measure = "acc")
+plot(accuracy)
+max_acc <- max(accuracy@y.values[[1]])
+max_acc
 ```
 
+
+## Creating a simpler tree version for the PowerPoint Presentation:
+
+```{r}
+build_simple_tree <- function(x) {
+  vac_com_h1n1 <- subset(x, select = -c(seasonal_vaccine))
+  vac_com_seas <- subset(x, select = -c(h1n1_vaccine))
+  
+  tree_obj <- rpart(data = vac_com_h1n1, formula = h1n1_vaccine ~ ., method = "class", minsplit = 10, cp = 0.01)
+  
+  plot(tree_obj, margin = 0.1)
+  title("Decision Tree H1N1")
+  summary(tree_obj)
+  text(tree_obj)
+
+  plotcp(tree_obj)
+  printcp(tree_obj)
+
+  rsq.rpart(tree_obj)
+  title("X-relative Error vs. #Splits")
+  
+  tree_obj2 <- rpart(data = vac_com_seas, formula = seasonal_vaccine ~ ., method = "class", minsplit = 10, cp = 0.01)
+  
+  tree_obj2$variable.importance
+  
+  plot(tree_obj2, margin = 0.1)
+  title("Decision Tree Seasonal")
+  summary(tree_obj2)
+  text(tree_obj2)
+
+  plotcp(tree_obj2)
+  printcp(tree_obj2)
+
+  rsq.rpart(tree_obj2)
+  title("X-relative Error vs. #Splits")
+  
+  
+  
+  return(list("h1n1" = tree_obj, "seas" = tree_obj2))
+}
+```
+
+```{r}
+build_simple_tree(d)
+```
 
