@@ -1,0 +1,242 @@
+---
+title: "Decision_Trees.Rmd"
+author: "Nicholas Garside"
+date: "11/10/2020"
+output: html_document
+---
+
+# Decision Trees
+
+This RMarkdown file reads in 6 different .csv files as dataframes, and generates a decision tree for each.
+
+## Read in the Data
+
+```{r}
+set.seed(123)
+a <- as.data.frame(read.csv("HI_factor_compcase_rest.csv", header = TRUE, stringsAsFactors = TRUE))
+b <- as.data.frame(read.csv("modelImputation_df.csv", header = TRUE, stringsAsFactors = TRUE))
+b <- b %>% rename(h1n1_vaccine = h1n1, seasonal_vaccine = seasonal)
+c <- as.data.frame(read.csv("modImputation_health_ins_as_category.csv", header = TRUE, stringsAsFactors = TRUE))
+d <- as.data.frame(read.csv("Unknown_for_all_categories.csv", header = TRUE, stringsAsFactors = TRUE))
+e <- as.data.frame(read.csv("completeCases.csv", header = TRUE, stringsAsFactors = TRUE))
+```
+
+## Load libraries
+
+```{r}
+library(corrplot)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(rpart)
+library(mgcv)
+library(ROCR)
+```
+
+## Build the Tree
+
+Function definition:
+```{r}
+build_tree <- function(x) {
+  vac_com_h1n1 <- subset(x, select = -c(seasonal_vaccine))
+  vac_com_seas <- subset(x, select = -c(h1n1_vaccine))
+  
+  tree_obj <- rpart(data = vac_com_h1n1, formula = h1n1_vaccine ~ ., method = "class", minsplit = 10, cp = 0.0002)
+  min_cp_h1n1 <- tree_obj$cptable[which.min(tree_obj$cptable[,"xerror"]),"CP"]
+  tree_obj <- rpart(data = vac_com_h1n1, formula = h1n1_vaccine ~ ., method = "class", minsplit = 10, cp = min_cp_h1n1)
+  
+  plot(tree_obj)
+  title("Decision Tree H1N1")
+  summary(tree_obj)
+  text(tree_obj)
+
+  plotcp(tree_obj)
+  printcp(tree_obj)
+
+  rsq.rpart(tree_obj)
+  title("X-relative Error vs. #Splits")
+  
+  tree_obj2 <- rpart(data = vac_com_seas, formula = seasonal_vaccine ~ ., method = "class", minsplit = 10, cp = 0.0002)
+  min_cp_seas <- tree_obj2$cptable[which.min(tree_obj2$cptable[,"xerror"]),"CP"]
+  tree_obj2 <- rpart(data = vac_com_seas, formula = seasonal_vaccine ~ ., method = "class", minsplit = 10, cp = min_cp_seas)
+  
+  tree_obj2$variable.importance
+  
+  plot(tree_obj2)
+  title("Decision Tree Seasonal")
+  summary(tree_obj2)
+  text(tree_obj2)
+
+  plotcp(tree_obj2)
+  printcp(tree_obj2)
+
+  rsq.rpart(tree_obj2)
+  title("X-relative Error vs. #Splits")
+  
+  
+  
+  return(list("h1n1" = tree_obj, "seas" = tree_obj2))
+}
+```
+
+Tree_a:
+```{r}
+models_a <- build_tree(a)
+```
+
+Tree_a ROC H1N1:
+```{r}
+predict_obj <- predict(models_a$h1n1, type='prob')
+pred <- prediction(predict_obj[,2], a$h1n1_vaccine)
+plot(performance(pred, "tpr", "fpr"))
+title("ROC Curve - Method A - H1N1")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR 
+```
+
+Tree_a ROC seasonal:
+```{r}
+predict_obj2 <- predict(models_a$seas, type='prob')
+pred2 <- prediction(predict_obj2[,2], a$seasonal_vaccine)
+plot(performance(pred2, "tpr", "fpr"))
+title("ROC Curve - Method A - Seasonal")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred2, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
+
+Tree_b:
+```{r}
+models_b <- build_tree(b)
+```
+
+Tree_b ROC H1N1:
+```{r}
+predict_obj <- predict(models_b$h1n1, type='prob')
+pred <- prediction(predict_obj[,2], b$h1n1_vaccine)
+plot(performance(pred, "tpr", "fpr"))
+title("ROC Curve - Method A - H1N1")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR 
+```
+
+
+Tree_b ROC seasonal:
+```{r}
+predict_obj2 <- predict(models_b$seas, type='prob')
+pred2 <- prediction(predict_obj2[,2], b$seasonal_vaccine)
+plot(performance(pred2, "tpr", "fpr"))
+title("ROC Curve - Method A - Seasonal")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred2, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
+Tree_c:
+```{r}
+models_c <- build_tree(c)
+```
+
+Tree_c ROC H1N1:
+```{r}
+predict_obj <- predict(models_c$h1n1, type='prob')
+pred <- prediction(predict_obj[,2], c$h1n1_vaccine)
+plot(performance(pred, "tpr", "fpr"))
+title("ROC Curve - Method A - H1N1")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR 
+```
+
+
+Tree_c ROC seasonal:
+```{r}
+predict_obj2 <- predict(models_c$seas, type='prob')
+pred2 <- prediction(predict_obj2[,2], c$seasonal_vaccine)
+plot(performance(pred2, "tpr", "fpr"))
+title("ROC Curve - Method A - Seasonal")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred2, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
+Tree_d:
+```{r}
+models_d <- build_tree(d)
+```
+
+Tree_d ROC H1N1:
+```{r}
+predict_obj <- predict(models_d$h1n1, type='prob')
+pred <- prediction(predict_obj[,2], d$h1n1_vaccine)
+plot(performance(pred, "tpr", "fpr"))
+title("ROC Curve - Method A - H1N1")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR 
+```
+
+
+Tree_d ROC seasonal:
+```{r}
+predict_obj2 <- predict(models_d$seas, type='prob')
+pred2 <- prediction(predict_obj2[,2], d$seasonal_vaccine)
+plot(performance(pred2, "tpr", "fpr"))
+title("ROC Curve - Method A - Seasonal")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred2, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
+Tree_e:
+```{r}
+models_e <- build_tree(e)
+```
+
+Tree_e ROC H1N1:
+```{r}
+predict_obj <- predict(models_e$h1n1, type='prob')
+pred <- prediction(predict_obj[,2], e$h1n1_vaccine)
+plot(performance(pred, "tpr", "fpr"))
+title("ROC Curve - Method A - H1N1")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR 
+```
+
+
+Tree_e ROC seasonal:
+```{r}
+predict_obj2 <- predict(models_e$seas, type='prob')
+pred2 <- prediction(predict_obj2[,2], e$seasonal_vaccine)
+plot(performance(pred2, "tpr", "fpr"))
+title("ROC Curve - Method A - Seasonal")
+abline(0,1,lty = 2)
+
+auc_ROCR <- performance(pred2, measure = "auc")
+auc_ROCR <- auc_ROCR@y.values[[1]]
+auc_ROCR
+```
+
+
