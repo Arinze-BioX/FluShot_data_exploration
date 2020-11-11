@@ -224,8 +224,13 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 
 ## Complete-case scenario 
 ```{r}
-completeCases <- trainingDF[complete.cases(trainingDF),]
-glimpse(completeCases)
+#completeCases <- trainingDF[complete.cases(trainingDF),]
+#completeCases$respondent_id <- NULL
+#glimpse(completeCases)
+#write.csv(completeCases,"completeCases.csv")
+
+
+
 ```
 
 ## Make missingness a category in health insurance
@@ -261,6 +266,8 @@ for (i in names(randImp)){
   randImp[missing10,i] <- freq10
   randImp[missing11,i] <- freq11
 }
+
+write.csv(randImp,"modImputation_health_ins_as_category.csv")
 ```
 
 ## Model Imputation 
@@ -273,8 +280,48 @@ levels(modelImp$health_insurance)[levels(modelImp$health_insurance) == "1"] = "P
 levels(modelImp$health_insurance) = c("None","Present","Missing")
 modelImp[is.na(modelImp$health_insurance),'health_insurance'] <- 'Missing'
 
-modelImp <- missForest(modelImp)
-summary(modelImp)
+# Now we have to make sure all variables are categorical
+modelImp <- transform(modelImp,
+                        h1n1_concern = as.integer(h1n1_concern),
+                        h1n1_knowledge = as.integer(h1n1_knowledge),
+                        behavioral_antiviral_meds = as.factor(behavioral_antiviral_meds),
+                        behavioral_avoidance = as.factor(behavioral_avoidance),
+                        behavioral_face_mask = as.factor(behavioral_face_mask),
+                        behavioral_wash_hands = as.factor(behavioral_wash_hands),
+                        behavioral_large_gatherings = as.factor(behavioral_large_gatherings),
+                        behavioral_outside_home = as.factor(behavioral_outside_home),
+                        behavioral_touch_face = as.factor(behavioral_touch_face),
+                        doctor_recc_h1n1 = as.factor(doctor_recc_h1n1),
+                        doctor_recc_seasonal = as.factor(doctor_recc_seasonal),
+                        chronic_med_condition = as.factor(chronic_med_condition),
+                        child_under_6_months = as.factor(child_under_6_months),
+                        health_worker = as.factor(health_worker),
+                        health_insurance = as.factor(health_insurance),
+                        sex = as.factor(sex),
+                        h1n1_vaccine = as.factor(h1n1_vaccine),
+                        seasonal_vaccine = as.factor(seasonal_vaccine),
+                        rent_or_own = as.factor(rent_or_own),
+                        marital_status = as.factor(marital_status),
+                        opinion_h1n1_vacc_effective = as.integer(opinion_h1n1_vacc_effective),
+                        opinion_h1n1_risk = as.integer(opinion_h1n1_risk),
+                        opinion_h1n1_sick_from_vacc = as.integer(opinion_h1n1_sick_from_vacc),
+                        opinion_seas_vacc_effective = as.integer(opinion_seas_vacc_effective),
+                        opinion_seas_risk = as.integer(opinion_seas_risk),
+                        opinion_seas_sick_from_vacc = as.integer(opinion_seas_sick_from_vacc),
+                        age_group = as.factor(age_group),
+                        education = as.factor(education),
+                        race = as.factor(race),
+                        income_poverty = as.factor(income_poverty),
+                        employment_status = as.factor(employment_status),
+                        hhs_geo_region = as.factor(hhs_geo_region),
+                        census_msa = as.factor(census_msa),
+                        household_adults = as.integer(household_adults),
+                        household_children = as.integer(household_children),
+                        employment_industry = as.factor(employment_industry),
+                        employment_occupation = as.factor(employment_occupation))
+
+#modelImp <- missForest(modelImp)
+#summary(modelImp)
 ```
 
 ## Splitting the data to 75:25
@@ -283,18 +330,157 @@ set.seed(123)
 sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.75)
 cc_train_df <- subset(completeCases,sample == TRUE)
 cc_test_df <- subset(completeCases, sample == FALSE)
-
+cc_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
+cc_complete_hy <- completeCases[,36]
+cc_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
+cc_complete_sy <- completeCases[,37]
 
 rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.75)
 rand_train_df <- subset(randImp,rand_sample == TRUE)
 rand_test_df <- subset(randImp, rand_sample == FALSE)
+rand_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
+rand_complete_hy <- completeCases[,36]
+rand_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
+rand_complete_sy <- completeCases[,37]
 
-glimpse(modelImp)
-modelImp <- sample.split(modelImp$h1n1_vaccine,SplitRatio = 0.75)
-model_train_df <- subset(modelImp,rand_sample == TRUE)
-model_test_df <- subset(modelImp, rand_sample == FALSE)
-glimpse(model_train_df)
-glimpse(model_test_df)
+#glimpse(modelImp)
+#modelImp <- sample.split(modelImp$h1n1_vaccine,SplitRatio = 0.75)
+#model_train_df <- subset(modelImp,rand_sample == TRUE)
+#model_test_df <- subset(modelImp, rand_sample == FALSE)
+#model_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
+#model_complete_hy <- completeCases[,36]
+#model_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
+#model_complete_sy <- completeCases[,37]
+```
+
+
+```{r}
+set.seed(123)
+# Let's split data for Lasso
+cc_train_hx <- model.matrix(h1n1_vaccine~.,cc_train_df)[,-(36:37)]
+cc_train_hy = cc_train_df[,36]
+cc_train_sx <- model.matrix(seasonal_vaccine~.,cc_train_df)[,-(36:37)]
+cc_train_sy = cc_train_df[,37]
+
+cc_test_hx <- model.matrix(h1n1_vaccine~.,cc_test_df)[,-(36:37)]
+cc_test_hy = cc_test_df[,36]
+cc_test_sx <- model.matrix(seasonal_vaccine~.,cc_test_df)[,-(36:37)]
+cc_test_sy = cc_test_df[,37]
+
+rand_train_hx <- model.matrix(h1n1_vaccine~.,rand_train_df)[,-(36:37)]
+rand_train_hy = rand_train_df[,36]
+rand_train_sx <- model.matrix(seasonal_vaccine~.,rand_train_df)[,-(36:37)]
+rand_train_sy = rand_train_df[,37]
+
+rand_test_hx <- model.matrix(h1n1_vaccine~.,rand_test_df)[,-(36:37)]
+rand_test_hy = rand_test_df[,36]
+rand_test_sx <- model.matrix(seasonal_vaccine~.,rand_test_df)[,-(36:37)]
+rand_test_sy = rand_test_df[,37]
+
+#model_train_hx <- model.matrix(h1n1_vaccine~.,model_train_df)[,-(36:37)]
+#model_train_hy = model_train_df[,36]
+#model_train_sx <- model.matrix(seasonal_vaccine~.,model_train_df)[,-(36:37)]
+#model_train_sy = model_train_df[,37]
+
+#model_test_hx <- model.matrix(h1n1_vaccine~.,model_test_df)[,-(36:37)]
+#model_test_hy = model_test_df[,36]
+#model_test_sx <- model.matrix(seasonal_vaccine~.,model_test_df)[,-(36:37)]
+#model_test_sy = model_test_df[,37]
+
+lambdaArray <- 10^(seq(from=12,to=-6, length.out = 300))
+```
+
+## Lasso Modeling 
+```{r}
+set.seed(123)
+cc_lassoModel_hx <- glmnet(cc_train_hx, cc_train_hy, alpha = 1, lambda = lambdaArray)
+cc_lassoModel_sx <- glmnet(cc_train_sx, cc_train_sy, alpha = 1, lambda = lambdaArray)
+
+rand_lassoModel_hx <- glmnet(rand_train_hx, rand_train_hy, alpha = 1, lambda = lambdaArray)
+rand_lassoModel_sx <- glmnet(rand_train_sx, rand_train_sy, alpha = 1, lambda = lambdaArray)
+
+#model_lassoModel_hx <- glmnet(model_train_hx, model_train_hy, alpha = 1, lambda = lambdaArray)
+#model_lassoModel_sx <- glmnet(model_train_sx, model_train_sy, alpha = 1, lambda = lambdaArray)
+```
+
+## get minimums
+```{r}
+set.seed(123)
+cc_hx <- cv.glmnet(cc_train_hx,cc_train_hy, alpha=1)
+cc_sx <- cv.glmnet(cc_train_sx,cc_train_sy, alpha=1)
+
+rand_hx <- cv.glmnet(rand_train_hx,rand_train_hy, alpha=1)
+rand_sx <- cv.glmnet(rand_train_sx,rand_train_hy, alpha=1)
+
+#model_hx <- cv.glmnet(cc_train_hx,cc_train_hy, alpha=1)
+#model_sx <- cv.glmnet(model_train_sx,model_train_sy, alpha=1)
+```
+
+## predictions 
+```{r}
+set.seed(123)
+sigmoid = function(x) {
+   1 / (1 + exp(-x))
+}
+
+print("---------------------------------------Complete Case H1N1------------------------------------------")
+cc_hx_pred <- predict(cc_lassoModel_hx, s=cc_hx$lambda.min, newx = cc_test_hx)
+mean((cc_hx_pred - cc_test_hy)^2) #mean squared error (MSE)
+cc_h_labels <- data.frame(cbind( actual=cc_test_df$h1n1_vaccine, pred=sigmoid(cc_hx_pred))) 
+cc_h_labels <- cc_h_labels %>%
+                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.625, 1, 0))
+cc_h_labels$actual = as.factor(cc_h_labels$actual)
+cc_h_labels$logicalPred = as.factor(cc_h_labels$logicalPred)
+summary(cc_h_labels)
+confusionMatrix(cc_h_labels$logicalPred,cc_h_labels$actual)
+print("---------------------------------------------------------------------------------------------------")
+
+print("--------------------------------------Complete Case Seasonal Flu-----------------------------------")
+cc_sx_pred <- predict(cc_lassoModel_sx, s=cc_sx$lambda.min, newx = cc_test_sx)
+mean((cc_sx_pred - cc_test_sy)^2) #mean squared error (MSE)
+cc_s_labels <- data.frame(cbind( actual=cc_test_df$seasonal_vaccine, pred=sigmoid(cc_sx_pred))) 
+cc_s_labels <- cc_s_labels %>%
+                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.6135, 1, 0))
+cc_s_labels$actual = as.factor(cc_s_labels$actual)
+cc_s_labels$logicalPred = as.factor(cc_s_labels$logicalPred)
+summary(cc_s_labels)
+confusionMatrix(cc_s_labels$logicalPred,cc_s_labels$actual)
+print("--------------------------------------------------------------------------------------------------")
+
+print("----------------------------------------Mod H1N1---------------------------------------------------")
+rand_hx_pred <- predict(rand_lassoModel_hx, s=rand_hx$lambda.min, newx = rand_test_hx)
+mean((rand_hx_pred - rand_test_hy)^2) #mean squared error (MSE)
+rand_h_labels <- data.frame(cbind( actual=rand_test_df$h1n1_vaccine, pred=sigmoid(rand_hx_pred))) 
+rand_h_labels <- rand_h_labels %>%
+                  mutate(logicalPred = ifelse(rand_h_labels$X1 > 0.625, 1, 0))
+rand_h_labels$actual = as.factor(rand_h_labels$actual)
+rand_h_labels$logicalPred = as.factor(rand_h_labels$logicalPred)
+summary(rand_h_labels)
+confusionMatrix(rand_h_labels$logicalPred,rand_h_labels$actual)
+print("-------------------------------------------------------------------------------------------------")
+
+print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
+rand_sx_pred <- predict(rand_lassoModel_sx, s=rand_sx$lambda.min, newx = rand_test_sx)
+mean((rand_sx_pred - rand_test_sy)^2) #mean squared error (MSE)
+rand_s_labels <- data.frame(cbind( actual=rand_test_df$seasonal_vaccine, pred=sigmoid(rand_sx_pred))) 
+rand_s_labels <- rand_s_labels %>%
+                  mutate(logicalPred = ifelse(rand_s_labels$X1 > 0.6125, 1, 0))
+rand_s_labels$actual = as.factor(rand_s_labels$actual)
+rand_s_labels$logicalPred = as.factor(rand_s_labels$logicalPred)
+summary(rand_s_labels)
+confusionMatrix(rand_s_labels$logicalPred,rand_s_labels$actual)
+print("-------------------------------------------------------------------------------------------------")
+
+#model_hx_pred <- predict(model_lassoModel_hx, s=model_hx$lambda.min, newx = model_test_hx)
+#mean((model_hx_pred - model_test_hy)^2) #mean squared error (MSE)
+#model_sx_pred <- predict(model_lassoModel_sx, s=model_sx$lambda.min, newx = model_test_sx)
+#mean((model_sx_pred - model_test_sy)^2) #mean squared error (MSE)
+```
+
+# 
+```{bash}
 
 ```
+
+
 
