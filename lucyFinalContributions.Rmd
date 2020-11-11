@@ -224,12 +224,20 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 
 ## Complete-case scenario 
 ```{r}
-#completeCases <- trainingDF[complete.cases(trainingDF),]
+completeCases <- trainingDF[complete.cases(trainingDF),]
+completeCases$respondent_id <- NULL
+
+# Nick Completecase & Unknown
+#completeCases <- read.csv("nickCompleteCase.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases <- read.csv("nickUnknown.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases$X <- NULL
 #completeCases$respondent_id <- NULL
-#glimpse(completeCases)
-#write.csv(completeCases,"completeCases.csv")
 
+# Arinze 
+#completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases$X <- NULL
 
+glimpse(completeCases)
 
 ```
 
@@ -327,7 +335,7 @@ modelImp <- transform(modelImp,
 ## Splitting the data to 75:25
 ```{r}
 set.seed(123)
-sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.75)
+sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.7)
 cc_train_df <- subset(completeCases,sample == TRUE)
 cc_test_df <- subset(completeCases, sample == FALSE)
 cc_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
@@ -335,7 +343,7 @@ cc_complete_hy <- completeCases[,36]
 cc_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
 cc_complete_sy <- completeCases[,37]
 
-rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.75)
+rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.7)
 rand_train_df <- subset(randImp,rand_sample == TRUE)
 rand_test_df <- subset(randImp, rand_sample == FALSE)
 rand_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
@@ -428,7 +436,7 @@ cc_hx_pred <- predict(cc_lassoModel_hx, s=cc_hx$lambda.min, newx = cc_test_hx)
 mean((cc_hx_pred - cc_test_hy)^2) #mean squared error (MSE)
 cc_h_labels <- data.frame(cbind( actual=cc_test_df$h1n1_vaccine, pred=sigmoid(cc_hx_pred))) 
 cc_h_labels <- cc_h_labels %>%
-                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.625, 1, 0))
+                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.611, 1, 0)) #0.625(Lucy) #0.62(Arinze) #0.611(Nick Unknown)
 cc_h_labels$actual = as.factor(cc_h_labels$actual)
 cc_h_labels$logicalPred = as.factor(cc_h_labels$logicalPred)
 summary(cc_h_labels)
@@ -440,7 +448,7 @@ cc_sx_pred <- predict(cc_lassoModel_sx, s=cc_sx$lambda.min, newx = cc_test_sx)
 mean((cc_sx_pred - cc_test_sy)^2) #mean squared error (MSE)
 cc_s_labels <- data.frame(cbind( actual=cc_test_df$seasonal_vaccine, pred=sigmoid(cc_sx_pred))) 
 cc_s_labels <- cc_s_labels %>%
-                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.6135, 1, 0))
+                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.62, 1, 0)) #0.6135(Lucy) #0.62(Arinze) #0.62(Nick Unknown)
 cc_s_labels$actual = as.factor(cc_s_labels$actual)
 cc_s_labels$logicalPred = as.factor(cc_s_labels$logicalPred)
 summary(cc_s_labels)
