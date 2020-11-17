@@ -12,7 +12,8 @@ library(ggplot2)
 library(lubridate)
 library(patchwork)
 library(gridExtra)
-library(psych)
+library(psych) # pairs.panels()
+library(psycho)
 library(corrplot)
 library(ggfortify)
 library(factoextra)
@@ -22,11 +23,12 @@ library(caret) # creatFolds()
 library(caTools) #sample.split()
 library(ROCR) # prediction(), performance()
 
-library(psych) # pairs.panels()
 library(leaps) # regsubsets()
 library(glmnet) # glmnet(), cv.glmnet(), predict()
 library(plyr)
 library(missForest)
+library(pROC)
+library(MASS)
 
 set.seed(123)
 ```
@@ -231,13 +233,13 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 
 # Nick Completecase & Unknown
 #completeCases <- read.csv("nickCompleteCase.csv",header=TRUE, stringsAsFactors = TRUE)
-#completeCases <- read.csv("nickUnknown.csv",header=TRUE, stringsAsFactors = TRUE)
-#completeCases$X <- NULL
-#completeCases$respondent_id <- NULL
+completeCases <- read.csv("nickUnknown.csv",header=TRUE, stringsAsFactors = TRUE)
+completeCases$X <- NULL
+completeCases$respondent_id <- NULL
 
 # Arinze 
-completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
-completeCases$X <- NULL
+#completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases$X <- NULL
 
 glimpse(completeCases)
 
@@ -438,7 +440,7 @@ cc_hx_pred <- predict(cc_lassoModel_hx, s=cc_hx$lambda.min, newx = cc_test_hx)
 mean((cc_hx_pred - cc_test_hy)^2) #mean squared error (MSE)
 cc_h_labels <- data.frame(cbind( actual=cc_test_df$h1n1_vaccine, pred=sigmoid(cc_hx_pred))) 
 cc_h_labels <- cc_h_labels %>%
-                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.611, 1, 0)) #0.625(Lucy) #0.62(Arinze) #0.611(Nick Unknown)
+                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.611, 1, 0)) #0.611(Lucy) #0.62(Arinze) #0.611(Nick Unknown)
 cc_h_labels$actual = as.factor(cc_h_labels$actual)
 cc_h_labels$logicalPred = as.factor(cc_h_labels$logicalPred)
 summary(cc_h_labels)
@@ -450,7 +452,7 @@ cc_sx_pred <- predict(cc_lassoModel_sx, s=cc_sx$lambda.min, newx = cc_test_sx)
 mean((cc_sx_pred - cc_test_sy)^2) #mean squared error (MSE)
 cc_s_labels <- data.frame(cbind( actual=cc_test_df$seasonal_vaccine, pred=sigmoid(cc_sx_pred))) 
 cc_s_labels <- cc_s_labels %>%
-                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.62, 1, 0)) #0.6135(Lucy) #0.62(Arinze) #0.62(Nick Unknown)
+                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.62, 1, 0)) #0.62(Lucy) #0.62(Arinze) #0.62(Nick Unknown)
 cc_s_labels$actual = as.factor(cc_s_labels$actual)
 cc_s_labels$logicalPred = as.factor(cc_s_labels$logicalPred)
 summary(cc_s_labels)
@@ -487,10 +489,55 @@ print("-------------------------------------------------------------------------
 #mean((model_sx_pred - model_test_sy)^2) #mean squared error (MSE)
 ```
 
-# 
-```{bash}
-
+```{r}
+set.seed(123)
+print("---------------------------------------Complete Case H1N1------------------------------------------")
+pred <- prediction(pred=sigmoid(cc_hx_pred), cc_test_df$h1n1_vaccine, label.ordering = NULL)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
+segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
+area <- auc(cc_test_df$h1n1_vaccine,pred=sigmoid(cc_hx_pred))
+area <- format(round(area, 4), nsmall = 4)
+text(x=0.8, y=0.1, labels = paste("AUC =", area))
+print("---------------------------------------------------------------------------------------------------")
 ```
 
+```{r}
+set.seed(123)
+print("--------------------------------------Complete Case Seasonal Flu-----------------------------------")
+pred <- prediction(pred=sigmoid(cc_sx_pred), cc_test_df$seasonal_vaccine, label.ordering = NULL)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
+segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
+area <- auc(cc_test_df$seasonal_vaccine,pred=sigmoid(cc_hx_pred))
+area <- format(round(area, 4), nsmall = 4)
+text(x=0.8, y=0.1, labels = paste("AUC =", area))
+print("---------------------------------------------------------------------------------------------------")
+```
 
+```{r}
+set.seed(123)
+print("----------------------------------------Mod H1N1---------------------------------------------------")
+pred <- prediction(pred=sigmoid(rand_hx_pred), rand_test_df$h1n1_vaccine, label.ordering = NULL)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
+segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
+area <- auc(rand_test_df$h1n1_vaccine,pred=sigmoid(rand_hx_pred))
+area <- format(round(area, 4), nsmall = 4)
+text(x=0.8, y=0.1, labels = paste("AUC =", area))
+print("---------------------------------------------------------------------------------------------------")
+```
+
+```{r}
+set.seed(123)
+print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
+pred <- prediction(pred=sigmoid(rand_sx_pred), rand_test_df$seasonal_vaccine, label.ordering = NULL)
+perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
+segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
+area <- auc(rand_test_df$seasonal_vaccine,pred=sigmoid(rand_sx_pred))
+area <- format(round(area, 4), nsmall = 4)
+text(x=0.8, y=0.1, labels = paste("AUC =", area))
+print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
+```
 
