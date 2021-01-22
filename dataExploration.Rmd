@@ -596,7 +596,7 @@ ggplot(trainingDF_miss_filled,
        aes(x = h1n1_vaccine, 
            fill = health_insurance)) + 
   geom_bar(position = "fill") +
-  labs(y = "Proportion") +theme_bw()
+  labs(y = "Proportion") +theme_bw() + title("Health Insurance Missingness Analysis")
 ```
 
 ```{r}
@@ -786,6 +786,9 @@ y.rand_test= training.random[-train_ind,] %>% subset(., select=c(h1n1_vaccine, s
 
 Write final files to csv file
 ```{r}
+modelImputation_df<- data.frame(train.rf.imp, labels)
+write.csv(modelImputation_df, "modelImputation_df.csv")
+
 write.csv(X.rf_train, "modelImp_xtrain.csv")
 write.csv(X.rf_test, "modelImp_xtest.csv")
 write.csv(y.rf_train, "modelImp_ytrain.csv")
@@ -794,6 +797,6 @@ write.csv(y.rf_test, "modelImp_ytest.csv")
 write.csv(X.rand_train, "randImp_xtrain.csv")
 write.csv(X.rand_test, "randImp_xtest.csv")
 write.csv(y.rand_train, "randImp_ytrain.csv")
-write.csv(y.rand_test, "randImp_ytest.csv")
+write.csv(X.rf_train, "randImp_ytest.csv")
 ```
 

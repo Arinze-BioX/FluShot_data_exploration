@@ -1,0 +1,345 @@
+---
+title: "xgboost_tree_flushot_analysis"
+author: "Arinze Okafor"
+date: "1/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in files
+```{r}
+library(readxl)
+library(tidyverse)
+library(xgboost)
+library(caret)
+library(plyr)
+comp.case.df = read.csv("completeCases.csv", header = TRUE) %>% subset(., select=-X)
+rfImp.df = read.csv("modelImputation_df.csv", header = TRUE) %>% subset(., select=-X)
+unknown.case.df= read.csv("Unknown_for_all_categories.csv", header=TRUE) %>% subset(., select=-X)
+mod.imp<- read.csv("modImputation_health_ins_as_category.csv", header = TRUE) %>% subset(., select=-X)
+
+```
+
+Trying one-hot encoding
+```{r}
+library(mltools)
+comp.case.df<-one_hot(comp.case.df)
+unknown.case.df<-one_hot(unknown.case.df)
+rfImp.df<-one_hot(rfImp.df)
+mod.imp<-one_hot(mod.imp)
+```
+##For H1N1 vaccine
+
+Split data
+```{r}
+set.seed(123)
+smp_size <- floor(0.75 * nrow(comp.case.df))
+train_ind <- sample(seq_len(nrow(comp.case.df)), size = smp_size)
+
+X.comp_train <- comp.case.df[train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+X.comp_test <- comp.case.df[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+y.comp_train = comp.case.df[train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+y.comp_test= comp.case.df[-train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+
+smp_size <- floor(0.75 * nrow(unknown.case.df))
+train_ind <- sample(seq_len(nrow(unknown.case.df)), size = smp_size)
+
+X.unkn_train <- unknown.case.df[train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+X.unkn_test <- unknown.case.df[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+y.unkn_train = unknown.case.df[train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+y.unkn_test= unknown.case.df[-train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+
+smp_size <- floor(0.75 * nrow(mod.imp))
+train_ind <- sample(seq_len(nrow(mod.imp)), size = smp_size)
+
+X.mode_train <- mod.imp[train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+X.mode_test <- mod.imp[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine))
+y.mode_train = mod.imp[train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+y.mode_test= mod.imp[-train_ind,] %>% subset(., select=c(h1n1_vaccine, seasonal_vaccine))
+
+
+smp_size <- floor(0.75 * nrow(rfImp.df))
+train_ind <- sample(seq_len(nrow(rfImp.df)), size = smp_size)
+
+X.rf_train <- rfImp.df[train_ind, ] %>% subset(., select=-c(h1n1))
+X.rf_test <- rfImp.df[-train_ind, ] %>% subset(., select=-c(h1n1))
+y.rf_train = rfImp.df[train_ind,] %>% transmute(h1n1_vaccine=h1n1, seasonal_vaccine=seasonal)
+y.rf_test= rfImp.df[-train_ind,] %>% transmute(h1n1_vaccine=h1n1, seasonal_vaccine=seasonal)
+```
+
+#Under sampling
+```{r}
+library(unbalanced)
+set.seed(123)
+comp<-ubUnder(data.frame(X.comp_train), y.comp_train$h1n1_vaccine, perc = 50, method = "percPos", w = NULL)
+rf<-ubUnder(data.frame(X.rf_train), y.rf_train$h1n1_vaccine, perc = 50, method = "percPos", w = NULL)
+mo.de<-ubUnder(data.frame(X.mode_train), y.mode_train$h1n1_vaccine, perc = 50, method = "percPos", w = NULL)
+unkn<-ubUnder(data.frame(X.unkn_train), y.unkn_train$h1n1_vaccine, perc = 50, method = "percPos", w = NULL)
+
+X.rf_train.h1n1<-rf$X
+y.rf_train.h1n1<-rf$Y
+X.comp_train.h1n1<-comp$X
+y.comp_train.h1n1<-comp$Y
+X.mode_train.h1n1<-mo.de$X
+y.mode_train.h1n1<-mo.de$Y
+X.unkn_train.h1n1<-unkn$X
+y.unkn_train.h1n1<-unkn$Y
+
+comp1<-X.comp_test
+rf1<-X.rf_test
+mo.de1<-X.mode_test
+unkn1<-X.unkn_test
+
+X.rf_test.h1n1<-rf1[,!names(rf1) == "h1n1_vaccine"]
+y.rf_test.h1n1<-y.rf_test[,names(y.rf_test) == "h1n1_vaccine"]
+X.comp_test.h1n1<-comp1[,!names(rf1) == "h1n1_vaccine"]
+y.comp_test.h1n1<-y.comp_test[,names(y.comp_test) == "h1n1_vaccine"]
+X.mode_test.h1n1<-mo.de1[,!names(rf1) == "h1n1_vaccine"]
+y.mode_test.h1n1<-y.mode_test[,names(y.mode_test) == "h1n1_vaccine"]
+X.unkn_test.h1n1<-unkn1[,!names(rf1) == "h1n1_vaccine"]
+y.unkn_test.h1n1<-y.unkn_test[,names(y.unkn_test) == "h1n1_vaccine"]
+
+
+```
+
+Trying XGBoost
+```{r}
+library(ROCR)
+
+set.seed(123) 
+library(Matrix)
+library(performanceEstimation)
+#prediction for model-based imputation
+rf.train.xg.h1n1 <- as(as.matrix(sapply(X.rf_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+rf.test.xg.h1n1 <- as(as.matrix(sapply(X.rf_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_a <- xgboost(data=rf.train.xg.h1n1, label=as.numeric(y.rf_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.rf <- predict(bstSparse_a, rf.test.xg.h1n1)
+classificationMetrics(factor(as.numeric(y.rf_test.h1n1)),as.numeric(xg.pred.rf>0.51))
+
+
+#PREDICTION for the complete case scenario
+comp.train.xg.h1n1 <- as(as.matrix(sapply(X.comp_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+comp.test.xg.h1n1 <- as(as.matrix(sapply(X.comp_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_b <- xgboost(data=comp.train.xg.h1n1, label=as.numeric(y.comp_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.comp <- predict(bstSparse_b, comp.test.xg.h1n1)
+classificationMetrics(factor(as.numeric(y.comp_test.h1n1)),as.numeric(xg.pred.comp>0.51))
+
+#prediction for missingness as factor scenario
+unkn.train.xg.h1n1 <- as(as.matrix(sapply(X.unkn_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+unkn.test.xg.h1n1 <- as(as.matrix(sapply(X.unkn_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_c <- xgboost(data=unkn.train.xg.h1n1, label=as.numeric(y.unkn_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.unkn <- predict(bstSparse_c, unkn.test.xg.h1n1)
+classificationMetrics(factor(as.numeric(y.unkn_test.h1n1)),as.numeric(xg.pred.unkn>0.51))
+
+#predicting for mode imputation
+mode.train.xg.h1n1 <- as(as.matrix(sapply(X.mode_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+mode.test.xg.h1n1 <- as(as.matrix(sapply(X.mode_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_d <- xgboost(data=mode.train.xg.h1n1, label=as.numeric(y.mode_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.mode <- predict(bstSparse_d, mode.test.xg.h1n1)
+classificationMetrics(factor(as.numeric(y.mode_test.h1n1)),as.numeric(xg.pred.mode>0.51))
+
+```
+
+getting ROC
+```{r}
+library(pROC)
+auc(factor(as.numeric(y.rf_test.h1n1)),as.numeric(xg.pred.rf>0.51))
+auc(factor(as.numeric(y.comp_test.h1n1)),as.numeric(xg.pred.comp>0.51))
+auc(factor(as.numeric(y.unkn_test.h1n1)),as.numeric(xg.pred.unkn>0.51))
+auc(factor(as.numeric(y.mode_test.h1n1)),as.numeric(xg.pred.mode>0.51))
+```
+
+##For seasonal
+
+Split and balance data
+```{r}
+set.seed(123)
+smp_size <- floor(0.75 * nrow(comp.case.df))
+train_ind <- sample(seq_len(nrow(comp.case.df)), size = smp_size)
+
+X.comp_train <- comp.case.df[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.comp_test <- comp.case.df[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+y.comp_train = comp.case.df[train_ind,] %>% subset(., select=c(seasonal_vaccine))
+y.comp_test= comp.case.df[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
+
+smp_size <- floor(0.75 * nrow(unknown.case.df))
+train_ind <- sample(seq_len(nrow(unknown.case.df)), size = smp_size)
+
+X.unkn_train <- unknown.case.df[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.unkn_test <- unknown.case.df[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+y.unkn_train = unknown.case.df[train_ind,] %>% subset(., select=c(seasonal_vaccine))
+y.unkn_test= unknown.case.df[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
+
+smp_size <- floor(0.75 * nrow(mod.imp))
+train_ind <- sample(seq_len(nrow(mod.imp)), size = smp_size)
+
+X.mode_train <- mod.imp[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.mode_test <- mod.imp[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+y.mode_train = mod.imp[train_ind,] %>% subset(., select=c(seasonal_vaccine))
+y.mode_test= mod.imp[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
+
+
+smp_size <- floor(0.75 * nrow(rfImp.df))
+train_ind <- sample(seq_len(nrow(rfImp.df)), size = smp_size)
+
+X.rf_train <- rfImp.df[train_ind, ] %>% subset(., select=-c(h1n1, seasonal))
+X.rf_test <- rfImp.df[-train_ind, ] %>% subset(., select=-c(h1n1, seasonal))
+y.rf_train = rfImp.df[train_ind,] %>% transmute(seasonal_vaccine=seasonal)
+y.rf_test= rfImp.df[-train_ind,] %>% transmute(seasonal_vaccine=seasonal)
+
+library(unbalanced)
+set.seed(123)
+comp<-ubUnder(data.frame(X.comp_train), y.comp_train$seasonal_vaccine==0, perc = 50, method = "percPos", w = NULL)
+rf<-ubUnder(data.frame(X.rf_train), y.rf_train$seasonal_vaccine, perc = 50, method = "percPos", w = NULL)
+mo.de<-ubUnder(data.frame(X.mode_train), y.mode_train$seasonal_vaccine, perc = 50, method = "percPos", w = NULL)
+unkn<-ubUnder(data.frame(X.unkn_train), y.unkn_train$seasonal_vaccine, perc = 50, method = "percPos", w = NULL)
+
+X.rf_train.seas<-rf$X
+y.rf_train.seas<-rf$Y
+X.comp_train.seas<-comp$X
+y.comp_train.seas<-as.numeric(comp$Y==FALSE)
+X.mode_train.seas<-mo.de$X
+y.mode_train.seas<-mo.de$Y
+X.unkn_train.seas<-unkn$X
+y.unkn_train.seas<-unkn$Y
+
+
+comp1<-X.comp_test
+rf1<-X.rf_test
+mo.de1<-X.mode_test
+unkn1<-X.unkn_test
+
+X.rf_test.seas<-rf1
+y.rf_test.seas<-y.rf_test[,names(y.rf_test) == "seasonal_vaccine"]
+X.comp_test.seas<-comp1
+y.comp_test.seas<-y.comp_test[,names(y.comp_test) == "seasonal_vaccine"]
+X.mode_test.seas<-mo.de1
+y.mode_test.seas<-y.mode_test[,names(y.mode_test) == "seasonal_vaccine"]
+X.unkn_test.seas<-unkn1
+y.unkn_test.seas<-y.unkn_test[,names(y.unkn_test) == "seasonal_vaccine"]
+
+
+```
+
+Trying XGBoost
+```{r}
+library(pROC)
+
+set.seed(123) 
+library("Matrix")
+rf.train.xg.seas <- as(as.matrix(sapply(X.rf_train.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+rf.test.xg.seas <- as(as.matrix(sapply(X.rf_test.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_e <- xgboost(data=rf.train.xg.seas, label=as.numeric(y.rf_train.seas), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.rf <- predict(bstSparse_e, rf.test.xg.seas)
+classificationMetrics(factor(as.numeric(y.rf_test.seas)),as.numeric(xg.pred.rf>0.50))
+
+
+comp.train.xg.seas <- as(as.matrix(sapply(X.comp_train.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+comp.test.xg.seas <- as(as.matrix(sapply(X.comp_test.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_f <- xgboost(data=comp.train.xg.seas, label=as.numeric(y.comp_train.seas), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.comp <- predict(bstSparse_f, comp.test.xg.seas)
+classificationMetrics(factor(as.numeric(y.comp_test.seas)),as.numeric(xg.pred.comp>0.50))
+
+unkn.train.xg.seas <- as(as.matrix(sapply(X.unkn_train.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+unkn.test.xg.seas <- as(as.matrix(sapply(X.unkn_test.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_g <- xgboost(data=unkn.train.xg.seas, label=as.numeric(y.unkn_train.seas), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.unkn <- predict(bstSparse_g, unkn.test.xg.seas)
+classificationMetrics(factor(as.numeric(y.unkn_test.seas)),as.numeric(xg.pred.unkn>0.50))
+
+mode.train.xg.seas <- as(as.matrix(sapply(X.mode_train.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+mode.test.xg.seas <- as(as.matrix(sapply(X.mode_test.seas, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
+bstSparse_h <- xgboost(data=mode.train.xg.seas, label=as.numeric(y.mode_train.seas), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+
+xg.pred.mode <- predict(bstSparse_h, mode.test.xg.seas)
+classificationMetrics(factor(as.numeric(y.mode_test.seas)),as.numeric(xg.pred.mode>0.50))
+
+```
+
+
+getting ROC
+```{r}
+library(pROC)
+auc(factor(as.numeric(y.rf_test.seas)),as.numeric(xg.pred.rf>0.52))
+auc(factor(as.numeric(y.comp_test.seas)),as.numeric(xg.pred.comp>0.52))
+auc(factor(as.numeric(y.unkn_test.seas)),as.numeric(xg.pred.unkn>0.52))
+auc(factor(as.numeric(y.mode_test.seas)),as.numeric(xg.pred.mode>0.52))
+```
+
+
+Feature importance
+```{r}
+importance_a <- xgb.importance(model = bstSparse_a)
+head(importance_a, 10)
+xgb.plot.importance(importance_matrix = importance_a)
+
+importance_b <- xgb.importance(model = bstSparse_b)
+head(importance_b, 10)
+xgb.plot.importance(importance_matrix = importance_b)
+
+importance_c <- xgb.importance(model = bstSparse_c)
+head(importance_c, 10)
+xgb.plot.importance(importance_matrix = importance_c)
+
+importance_d <- xgb.importance(model = bstSparse_d)
+head(importance_d, 10)
+xgb.plot.importance(importance_matrix = importance_d)
+
+importance_e <- xgb.importance(model = bstSparse_e)
+head(importance_e, 10)
+xgb.plot.importance(importance_matrix = importance_e)
+
+importance_f <- xgb.importance(model = bstSparse_f)
+head(importance_f, 10)
+xgb.plot.importance(importance_matrix = importance_f)
+
+importance_g <- xgb.importance(model = bstSparse_g)
+head(importance_g, 10)
+xgb.plot.importance(importance_matrix = importance_g)
+
+importance_h <- xgb.importance(model = bstSparse_h)
+head(importance_h, 10)
+xgb.plot.importance(importance_matrix = importance_h)
+
+```
+
+```{r}
+png(filename="comp_H1N1_Imp.png", width     = 3.25,
+  height    = 3.25,
+  units     = "in",
+  res       = 1200,
+  pointsize = 4)
+par(
+  mar      = c(5, 5, 2, 2),
+  xaxs     = "i",
+  yaxs     = "i",
+  cex.axis = 2,
+  cex.lab  = 2)
+xgb.plot.importance(importance_matrix = importance_b, top_n = 10)
+dev.off()
+
+png(filename="comp_seasonal_Imp.png", width     = 3.25,
+  height    = 3.25,
+  units     = "in",
+  res       = 1200,
+  pointsize = 4)
+par(
+  mar      = c(5, 5, 2, 2),
+  xaxs     = "i",
+  yaxs     = "i",
+  cex.axis = 2,
+  cex.lab  = 2)
+xgb.plot.importance(importance_matrix = importance_f, top_n = 10)
+dev.off()
+
+```
+
