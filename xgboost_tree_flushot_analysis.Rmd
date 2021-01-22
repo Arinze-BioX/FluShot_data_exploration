@@ -343,3 +343,30 @@ dev.off()
 
 ```
 
+```{r}
+png(filename="comp_H1N1_Importance.png")
+ggplot(importance_b[1:10,], aes(x = Feature, y = Importance))+ 
+  geom_bar(stat="identity", fill="#191870") + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for H1N1 vaccination (XGBoost Tree)") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+dev.off()
+
+png(filename="comp_seasonal_Importance.png")
+ggplot(importance_f[1:10,], aes(x = Feature, y = Importance))+ 
+  geom_bar(stat="identity", fill="#191870") + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for Seasonal vaccination (XGBoost Tree)") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=11), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+dev.off()
+
+```
+
