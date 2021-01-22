@@ -345,8 +345,8 @@ dev.off()
 
 ```{r}
 png(filename="comp_H1N1_Importance.png")
-ggplot(importance_b[1:10,], aes(x = Feature, y = Importance))+ 
-  geom_bar(stat="identity", fill="#191870") + #previously 191870
+ggplot(importance_b[1:10,], aes(x = reorder(Feature, Importance), y = Importance))+ 
+  geom_bar(stat="identity", fill="#191870") + 
   theme_classic() +
   coord_flip() +
   geom_hline(yintercept=0, color="#191870") +
@@ -357,8 +357,8 @@ ggplot(importance_b[1:10,], aes(x = Feature, y = Importance))+
 dev.off()
 
 png(filename="comp_seasonal_Importance.png")
-ggplot(importance_f[1:10,], aes(x = Feature, y = Importance))+ 
-  geom_bar(stat="identity", fill="#191870") + #previously 191870
+ggplot(importance_f[1:10,], aes(x = reorder(Feature, Importance), y = Importance))+ 
+  geom_bar(stat="identity", fill="#191870") + 
   theme_classic() +
   coord_flip() +
   geom_hline(yintercept=0, color="#191870") +
