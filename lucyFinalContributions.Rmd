@@ -29,6 +29,9 @@ library(plyr)
 library(missForest)
 library(pROC)
 library(MASS)
+library(dplyr)
+
+library(unbalanced)
 
 set.seed(123)
 ```
@@ -228,14 +231,15 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 ```{r}
 #-----MAKE CHANGES HERE-------!
 
-#completeCases <- trainingDF[complete.cases(trainingDF),]
-#completeCases$respondent_id <- NULL
+completeCases <- trainingDF[complete.cases(trainingDF),]
+completeCases$respondent_id <- NULL
+completeCases$seasonal_vaccine <- !completeCases$seasonal_vaccine  #major change Lucy*****
 
 # Nick Completecase & Unknown
-#completeCases <- read.csv("nickCompleteCase.csv",header=TRUE, stringsAsFactors = TRUE)
-completeCases <- read.csv("nickUnknown.csv",header=TRUE, stringsAsFactors = TRUE)
-completeCases$X <- NULL
-completeCases$respondent_id <- NULL
+#---completeCases <- read.csv("nickCompleteCase.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases <- read.csv("nickUnknown.csv",header=TRUE, stringsAsFactors = TRUE)
+#completeCases$X <- NULL
+#completeCases$respondent_id <- NULL
 
 # Arinze 
 #completeCases <- read.csv("arinzeModel.csv",header=TRUE, stringsAsFactors = TRUE)
@@ -339,15 +343,16 @@ modelImp <- transform(modelImp,
 ## Splitting the data to 75:25
 ```{r}
 set.seed(123)
-sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.7)
+sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.75)
 cc_train_df <- subset(completeCases,sample == TRUE)
 cc_test_df <- subset(completeCases, sample == FALSE)
 cc_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
 cc_complete_hy <- completeCases[,36]
 cc_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
 cc_complete_sy <- completeCases[,37]
+summary(cc_complete_sy)
 
-rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.7)
+rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.75)
 rand_train_df <- subset(randImp,rand_sample == TRUE)
 rand_test_df <- subset(randImp, rand_sample == FALSE)
 rand_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
@@ -399,17 +404,30 @@ rand_test_sy = rand_test_df[,37]
 #model_test_sx <- model.matrix(seasonal_vaccine~.,model_test_df)[,-(36:37)]
 #model_test_sy = model_test_df[,37]
 
+#balancing the trees 
+cc_train_bh <- ubUnder(cc_train_hx, cc_train_hy, perc=50, method="percPos", w=NULL)
+cc_train_bs <- ubUnder(cc_train_sx, cc_train_sy, perc=50, method="percPos", w=NULL)
+
+rand_train_bh <- ubUnder(rand_train_hx, rand_train_hy, perc=50, method="percPos", w=NULL)
+rand_train_bs <- ubUnder(rand_train_sx, rand_train_sy, perc=50, method="percPos", w=NULL)
+
 lambdaArray <- 10^(seq(from=12,to=-6, length.out = 300))
 ```
 
 ## Lasso Modeling 
 ```{r}
 set.seed(123)
-cc_lassoModel_hx <- glmnet(cc_train_hx, cc_train_hy, alpha = 1, lambda = lambdaArray)
-cc_lassoModel_sx <- glmnet(cc_train_sx, cc_train_sy, alpha = 1, lambda = lambdaArray)
+#cc_lassoModel_hx <- glmnet(cc_train_hx, cc_train_hy, alpha = 1, lambda = lambdaArray)
+#cc_lassoModel_sx <- glmnet(cc_train_sx, cc_train_sy, alpha = 1, lambda = lambdaArray)
 
-rand_lassoModel_hx <- glmnet(rand_train_hx, rand_train_hy, alpha = 1, lambda = lambdaArray)
-rand_lassoModel_sx <- glmnet(rand_train_sx, rand_train_sy, alpha = 1, lambda = lambdaArray)
+#rand_lassoModel_hx <- glmnet(rand_train_hx, rand_train_hy, alpha = 1, lambda = lambdaArray)
+#rand_lassoModel_sx <- glmnet(rand_train_sx, rand_train_sy, alpha = 1, lambda = lambdaArray)
+
+cc_lassoModel_hx <- glmnet(cc_train_bh$X, cc_train_bh$Y, alpha = 1, lambda = lambdaArray)
+cc_lassoModel_sx <- glmnet(cc_train_bs$X, cc_train_bs$Y, alpha = 1, lambda = lambdaArray)
+
+rand_lassoModel_hx <- glmnet(rand_train_bh$X, rand_train_bh$Y, alpha = 1, lambda = lambdaArray)
+rand_lassoModel_sx <- glmnet(rand_train_bs$X, rand_train_bs$Y, alpha = 1, lambda = lambdaArray)
 
 #model_lassoModel_hx <- glmnet(model_train_hx, model_train_hy, alpha = 1, lambda = lambdaArray)
 #model_lassoModel_sx <- glmnet(model_train_sx, model_train_sy, alpha = 1, lambda = lambdaArray)
@@ -440,7 +458,7 @@ cc_hx_pred <- predict(cc_lassoModel_hx, s=cc_hx$lambda.min, newx = cc_test_hx)
 mean((cc_hx_pred - cc_test_hy)^2) #mean squared error (MSE)
 cc_h_labels <- data.frame(cbind( actual=cc_test_df$h1n1_vaccine, pred=sigmoid(cc_hx_pred))) 
 cc_h_labels <- cc_h_labels %>%
-                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.611, 1, 0)) #0.611(Lucy) #0.62(Arinze) #0.611(Nick Unknown)
+                  mutate(logicalPred = ifelse(cc_h_labels$X1 > 0.655, 1, 0)) #0.655(Lucy) #0.67(Arinze) #0.67(Nick Unknown)
 cc_h_labels$actual = as.factor(cc_h_labels$actual)
 cc_h_labels$logicalPred = as.factor(cc_h_labels$logicalPred)
 summary(cc_h_labels)
@@ -452,7 +470,7 @@ cc_sx_pred <- predict(cc_lassoModel_sx, s=cc_sx$lambda.min, newx = cc_test_sx)
 mean((cc_sx_pred - cc_test_sy)^2) #mean squared error (MSE)
 cc_s_labels <- data.frame(cbind( actual=cc_test_df$seasonal_vaccine, pred=sigmoid(cc_sx_pred))) 
 cc_s_labels <- cc_s_labels %>%
-                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.62, 1, 0)) #0.62(Lucy) #0.62(Arinze) #0.62(Nick Unknown)
+                  mutate(logicalPred = ifelse(cc_s_labels$X1 > 0.63, 1, 0)) #0.63(Lucy) #0.625(Arinze) #0.625(Nick Unknown)
 cc_s_labels$actual = as.factor(cc_s_labels$actual)
 cc_s_labels$logicalPred = as.factor(cc_s_labels$logicalPred)
 summary(cc_s_labels)
@@ -464,7 +482,7 @@ rand_hx_pred <- predict(rand_lassoModel_hx, s=rand_hx$lambda.min, newx = rand_te
 mean((rand_hx_pred - rand_test_hy)^2) #mean squared error (MSE)
 rand_h_labels <- data.frame(cbind( actual=rand_test_df$h1n1_vaccine, pred=sigmoid(rand_hx_pred))) 
 rand_h_labels <- rand_h_labels %>%
-                  mutate(logicalPred = ifelse(rand_h_labels$X1 > 0.625, 1, 0))
+                  mutate(logicalPred = ifelse(rand_h_labels$X1 > 0.668, 1, 0)) #0.668
 rand_h_labels$actual = as.factor(rand_h_labels$actual)
 rand_h_labels$logicalPred = as.factor(rand_h_labels$logicalPred)
 summary(rand_h_labels)
@@ -476,7 +494,7 @@ rand_sx_pred <- predict(rand_lassoModel_sx, s=rand_sx$lambda.min, newx = rand_te
 mean((rand_sx_pred - rand_test_sy)^2) #mean squared error (MSE)
 rand_s_labels <- data.frame(cbind( actual=rand_test_df$seasonal_vaccine, pred=sigmoid(rand_sx_pred))) 
 rand_s_labels <- rand_s_labels %>%
-                  mutate(logicalPred = ifelse(rand_s_labels$X1 > 0.6125, 1, 0))
+                  mutate(logicalPred = ifelse(rand_s_labels$X1 > 0.623, 1, 0)) #0.623
 rand_s_labels$actual = as.factor(rand_s_labels$actual)
 rand_s_labels$logicalPred = as.factor(rand_s_labels$logicalPred)
 summary(rand_s_labels)
@@ -492,8 +510,9 @@ print("-------------------------------------------------------------------------
 ```{r}
 set.seed(123)
 print("---------------------------------------Complete Case H1N1------------------------------------------")
-pred <- prediction(pred=sigmoid(cc_hx_pred), cc_test_df$h1n1_vaccine, label.ordering = NULL)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+pred <- ROCR::prediction(sigmoid(cc_hx_pred), cc_test_df$h1n1_vaccine, label.ordering = NULL)
+perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
+#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(cc_test_df$h1n1_vaccine,pred=sigmoid(cc_hx_pred))
@@ -505,8 +524,9 @@ print("-------------------------------------------------------------------------
 ```{r}
 set.seed(123)
 print("--------------------------------------Complete Case Seasonal Flu-----------------------------------")
-pred <- prediction(pred=sigmoid(cc_sx_pred), cc_test_df$seasonal_vaccine, label.ordering = NULL)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+pred <- ROCR::prediction(pred=sigmoid(cc_sx_pred), cc_test_df$seasonal_vaccine, label.ordering = NULL)
+perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
+#perf <- performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(cc_test_df$seasonal_vaccine,pred=sigmoid(cc_hx_pred))
@@ -518,8 +538,9 @@ print("-------------------------------------------------------------------------
 ```{r}
 set.seed(123)
 print("----------------------------------------Mod H1N1---------------------------------------------------")
-pred <- prediction(pred=sigmoid(rand_hx_pred), rand_test_df$h1n1_vaccine, label.ordering = NULL)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+pred <- ROCR::prediction(pred=sigmoid(rand_hx_pred), rand_test_df$h1n1_vaccine, label.ordering = NULL)
+perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
+#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(rand_test_df$h1n1_vaccine,pred=sigmoid(rand_hx_pred))
@@ -531,13 +552,108 @@ print("-------------------------------------------------------------------------
 ```{r}
 set.seed(123)
 print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
-pred <- prediction(pred=sigmoid(rand_sx_pred), rand_test_df$seasonal_vaccine, label.ordering = NULL)
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")
+pred <- ROCR::prediction(pred=sigmoid(rand_sx_pred), rand_test_df$seasonal_vaccine, label.ordering = NULL)
+perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
+#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(rand_test_df$seasonal_vaccine,pred=sigmoid(rand_sx_pred))
 area <- format(round(area, 4), nsmall = 4)
 text(x=0.8, y=0.1, labels = paste("AUC =", area))
 print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
+```
+```{r fig.align='center'}
+out_h = glmnet(cc_complete_hx, cc_complete_hy, alpha = 1, lambda = lambdaArray) # Fit lasso model on full dataset
+lasso_coef_h = predict(out_h, type = "coefficients", s = cc_hx$lambda.min) # Display coefficients using lambda chosen by CV
+#coefficients = coef(out_h, s=cc_hx$lambda.min)
+#lasso_df_h<-data.frame('variables'=lasso_coef_h@Dimnames[[1]], 'importance'=abs(as.data.frame(as.matrix(lasso_coef_h))[,1]))[3:102,]
+lasso_df_h<-data.frame('variables'=lasso_coef_h@Dimnames[[1]], 'importance'=abs(as.data.frame(as.matrix(lasso_coef_h))[,1]), "og"=as.data.frame(as.matrix(lasso_coef_h))[,1])[3:102,]
+lasso_df_h<-lasso_df_h %>% arrange(desc(importance))
+
+no_emp_hdf <- dplyr::filter(lasso_df_h, !grepl("employment_industry",variables))
+no_hhs_hdf <- dplyr::filter(no_emp_hdf, !grepl("hhs_geo_region",variables))
+no_occu_hdf <- dplyr::filter(no_hhs_hdf, !grepl("employment_occupation",variables))
+no_occu_hdf$variables = reorder(no_occu_hdf$variables,no_occu_hdf$importance)
+edited_hdf <- no_occu_hdf[0:20,]
+
+ggplot(edited_hdf, aes(x=variables, y=og)) +
+  geom_bar(stat="identity",fill=ifelse(edited_hdf$og < 0, "#dd5b56", "#191870")) + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for H1N1 vaccination") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+```
+
+```{r}
+out_s = glmnet(cc_complete_sx, cc_complete_sy, alpha = 1, lambda = lambdaArray) # Fit lasso model on full dataset
+lasso_coef_s = predict(out_s, type = "coefficients", s = cc_sx$lambda.min) # Display coefficients using lambda chosen by CV
+
+lasso_df_s<-data.frame('variables'=lasso_coef_s@Dimnames[[1]], 'importance'=abs(as.data.frame(as.matrix(lasso_coef_s))[,1]), "og"=as.data.frame(as.matrix(lasso_coef_s))[,1])[3:102,]
+lasso_df_s<-lasso_df_s %>% arrange(desc(importance))
+
+no_emp_sdf <- dplyr::filter(lasso_df_s, !grepl("employment_industry",variables))
+no_hhs_sdf <- dplyr::filter(no_emp_sdf, !grepl("hhs_geo_region",variables))
+no_occu_sdf <- dplyr::filter(no_hhs_sdf, !grepl("employment_occupation",variables))
+no_occu_sdf$variables = reorder(no_occu_sdf$variables,no_occu_sdf$importance)
+edited_sdf <- no_occu_sdf[0:20,]
+
+ggplot(edited_sdf, aes(x=variables, y=-og)) +
+  geom_bar(stat="identity",fill=ifelse(edited_sdf$og > 0, "#dd5b56", "#191870")) + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for seasonal vaccination") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+```
+```{r}
+out_rh = glmnet(rand_complete_hx, rand_complete_hy, alpha = 1, lambda = lambdaArray) # Fit lasso model on full dataset
+lasso_coef_rh = predict(out_rh, type = "coefficients", s = rand_hx$lambda.min) # Display coefficients using lambda chosen by CV
+
+lasso_df_rh<-data.frame('variables'=lasso_coef_rh@Dimnames[[1]], 'importance'=abs(as.data.frame(as.matrix(lasso_coef_rh))[,1]), "og"=as.data.frame(as.matrix(lasso_coef_rh))[,1])[3:102,]
+lasso_df_rh<-lasso_df_rh %>% arrange(desc(importance))
+
+no_emp_rhdf <- dplyr::filter(lasso_df_rh, !grepl("employment_industry",variables))
+no_hhs_rhdf <- dplyr::filter(no_emp_rhdf, !grepl("hhs_geo_region",variables))
+no_occu_rhdf <- dplyr::filter(no_hhs_rhdf, !grepl("employment_occupation",variables))
+no_occu_rhdf$variables = reorder(no_occu_rhdf$variables,no_occu_rhdf$importance)
+edited_rhdf <- no_occu_rhdf[0:20,]
+
+ggplot(edited_rhdf, aes(x=variables, y=og)) +
+  geom_bar(stat="identity",fill=ifelse(edited_rhdf$og < 0, "#dd5b56", "#191870")) + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for H1N1 vaccination:(miss as cat)") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+```
+```{r}
+out_rs = glmnet(rand_complete_sx, rand_complete_sy, alpha = 1, lambda = lambdaArray) # Fit lasso model on full dataset
+lasso_coef_rs = predict(out_rs, type = "coefficients", s = rand_sx$lambda.min) # Display coefficients using lambda chosen by CV
+
+lasso_df_rs<-data.frame('variables'=lasso_coef_rs@Dimnames[[1]], 'importance'=abs(as.data.frame(as.matrix(lasso_coef_rs))[,1]), "og"=as.data.frame(as.matrix(lasso_coef_rs))[,1])[3:102,]
+lasso_df_rs<-lasso_df_rs %>% arrange(desc(importance))
+
+no_emp_rsdf <- dplyr::filter(lasso_df_rs, !grepl("employment_industry",variables))
+no_hhs_rsdf <- dplyr::filter(no_emp_rsdf, !grepl("hhs_geo_region",variables))
+no_occu_rsdf <- dplyr::filter(no_hhs_rsdf, !grepl("employment_occupation",variables))
+no_occu_rsdf$variables = reorder(no_occu_rsdf$variables,no_occu_rsdf$importance)
+edited_rsdf <- no_occu_rsdf[0:20,]
+
+ggplot(edited_rsdf, aes(x=variables, y=-og)) +
+  geom_bar(stat="identity", fill=ifelse(edited_rsdf$og > 0, "#dd5b56", "#191870")) + #previously 191870
+  theme_classic() +
+  coord_flip() +
+  geom_hline(yintercept=0, color="#191870") +
+  xlab("variables") +
+  ylab("importance") +
+  ggtitle("Graph of importance against variables for seasonal vaccination (miss as cat)") +
+  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
 ```
 
