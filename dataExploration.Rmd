@@ -27,47 +27,15 @@ library(svglite)
 ```
 ## Reading the data 
 ```{r, echo=FALSE}
-subFormat = read.csv("submission_format.csv", header = TRUE)
-tef_data = read.csv("test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
-trf_data = read.csv("training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
-trl_data = read.csv("training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
+subFormat = read.csv("C:/Users/mail4/OneDrive - Duke University/Documents/BME590/BME590_flushot_project/FluShot_data_exploration/submission_format.csv", header = TRUE)
+tef_data = read.csv("C:/Users/mail4/OneDrive - Duke University/Documents/BME590/BME590_flushot_project/FluShot_data_exploration/test_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trf_data = read.csv("C:/Users/mail4/OneDrive - Duke University/Documents/BME590/BME590_flushot_project/FluShot_data_exploration/training_set_features.csv", header=TRUE, stringsAsFactors=TRUE)
+trl_data = read.csv("C:/Users/mail4/OneDrive - Duke University/Documents/BME590/BME590_flushot_project/FluShot_data_exploration/training_set_labels.csv", header=TRUE, stringsAsFactors=TRUE)
 testFeatures = data.frame(tef_data)
 trainingFeatures = data.frame(trf_data)
 trainingLabels = data.frame(trl_data)
 ```
-### Number of Rows
-```{r}
-nrow(subFormat)
-nrow(testFeatures)
-nrow(trainingFeatures)
-nrow(trainingLabels)
-```
-### Number of Columns 
-```{r}
-ncol(subFormat)
-ncol(testFeatures)
-ncol(trainingFeatures)
-ncol(trainingLabels)
-```
 
-
-### Head Viewing 
-* <span style="color:blue">Submission Format</span>
-```{r}
-head(subFormat)
-```
-* <span style="color:blue">Test Set Features</span>
-```{r}
-head(testFeatures)
-```
-* <span style="color:blue">Training Set Features</span>
-```{r}
-head(trainingFeatures)
-```
-* <span style="color:blue">Submission Format</span>
-```{r}
-head(trainingLabels)
-```
 ### Merging training data 
 ```{r}
 trainingDF = trainingFeatures
@@ -256,251 +224,14 @@ trainingDF <- transform(trainingDF, respondent_id = as.factor(respondent_id),
 
 ###Viewing missing points
 ```{r, fig.align='center'}
-pmiss <- vis_miss(trainingDF, warn_large_data = FALSE) +
+png(filename="vis_miss.png", width = 650, height = 600, units = "px", pointsize = 12,
+    bg = "white", res = 145)
+vis_miss(trainingDF, warn_large_data = FALSE) +
       theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, angle=0), axis.title = element_text(size=8), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
    coord_flip()
-pmiss
-ggsave("vis_miss.svg")
+dev.off()
 ```
 
-
-
-```{r, fig.align='center'}
-opinions = data.frame(trainingDF$opinion_h1n1_risk, trainingDF$opinion_h1n1_sick_from_vacc, trainingDF$opinion_h1n1_vacc_effective, trainingDF$opinion_seas_risk, trainingDF$opinion_seas_sick_from_vacc, trainingDF$opinion_seas_vacc_effective)
-names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_risk" ] = "opinion_h1n1_risk"
-names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_sick_from_vacc"] = "opinion_h1n1_sick_from_vacc"
-names(opinions)[names(opinions) == "trainingDF.opinion_h1n1_vacc_effective"] = "opinion_h1n1_vacc_effective"
-names(opinions)[names(opinions) == "trainingDF.opinion_seas_risk"] = "opinion_seas_risk"
-names(opinions)[names(opinions) == "trainingDF.opinion_seas_sick_from_vacc"] = "opinion_seas_sick_from_vacc"
-names(opinions)[names(opinions) == "trainingDF.opinion_seas_vacc_effective"] = "opinion_seas_vacc_effective"
-gg_miss_upset(opinions,nsets=6)
-```
-```{r, fig.align='center'}
-gg_miss_upset(trainingDF, nsets=6, order.by = "freq")
-```
-
-
-
-```{r, fig.align='center', error=TRUE}
-withNA <- which(sapply(trainingDF,anyNA))
-missingVals <-c()
-for (col in 1:50){
-   #missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
-   empty <- filter(trainingDF, trainingDF[col] == "")
-   total <- sum(is.na(trainingDF[col]) + ncol(empty))
-   print(ncol(empty))
-   missingVals <- c(missingVals, sum(is.na(trainingDF[col])))
-}
-missingnessDF <- data.frame(cols=c(names(trainingDF)),vals=missingVals)
-p1 <- ggplot(missingnessDF, aes(y=cols, x=vals)) +
-      geom_col(fill="#fb6097", color="white", alpha=0.75) +
-     theme(plot.title = element_text(hjust = 0.5, color="#fb6097", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-     xlab("employment industry")
-p1
-```
-
-### Training Feature Plots 
-```{r fig.align='center'}
-trainingDF <- trainingDF %>%
-   mutate(seasonal_vaccine = as.factor(seasonal_vaccine))
-p1 <- ggplot(trainingDF, aes(x=h1n1_concern, fill=seasonal_vaccine)) +
-      geom_bar(alpha=0.85) +
-      theme_classic() +
-      ggtitle("Graph of H1N1 concern frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="#464646", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("H1N1 concern") +
-      scale_fill_manual(values=c("#363636", "#00be95"))
-p2 <- ggplot(trainingDF, aes(h1n1_knowledge)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of H1N1 knowledge frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("H1NI knowledge")
-p3 <- ggplot(trainingDF, aes(behavioral_antiviral_meds)) +
-      geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral antiviral meds frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Antiviral Meds")
-p4 <- ggplot(trainingDF, aes(behavioral_avoidance)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral avoidance frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Avoidance")
-(p1 + p2) / (p3 + p4)
-```
-
-```{r, fig.align='center'}
-p5 <- ggplot(trainingDF, aes(behavioral_face_mask)) +
-      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral face mask frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Face Mask")
-p6 <- ggplot(trainingDF, aes(behavioral_wash_hands)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral wash hands frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Wash Hands")
-p7 <- ggplot(trainingDF, aes(behavioral_large_gatherings)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral large gatherings frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Large Gatherings")
-p8 <- ggplot(trainingDF, aes(behavioral_outside_home)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral outside home frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Outside Home")
-(p5+p6) / (p7+p8)
-```
-
-
-```{r, fig.align='center'}
-p9 <- ggplot(trainingDF, aes(behavioral_touch_face)) +
-      geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of behavioral touch face frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Behavioral Touch Face")
-p10 <- ggplot(trainingDF, aes(doctor_recc_h1n1)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of docc_recc_h1n1 frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Doctor Rec H1N1 Vacc")
-p11 <- ggplot(trainingDF, aes(doctor_recc_seasonal)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of doctor_recc_seasonal frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Doctor Rec Seasonal Flue Vacc")
-p12 <- ggplot(trainingDF, aes(child_under_6_months)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of children under 6 months frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Children Under 6 Months ")
- (p9+p10) / (p11+p12)
-```
-
-
-```{r, fig.align='center'}
-p1 <- ggplot(trainingDF, aes(health_worker)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of health worker frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Health Worker")
-p2 <- ggplot(trainingDF, aes(health_insurance)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of health insurance frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("H1NI knowledge")
-p3 <- ggplot(trainingDF, aes(opinion_h1n1_vacc_effective)) +
-      geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_h1n1_vacc_effective frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion H1N1 Vacc Effective")
-p4 <- ggplot(trainingDF, aes(opinion_h1n1_risk)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_h1n1_risk frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion H1N1 Risk")
-(p1 + p2) / (p3 + p4)
-```
-
-
-```{r, fig.align='center'}
-p5 <- ggplot(trainingDF, aes(opinion_h1n1_sick_from_vacc)) +
-      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_h1n1_sick_from_vacc frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion Sick from H1N1 Vaccine")
-p6 <- ggplot(trainingDF, aes(opinion_seas_vacc_effective)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_seas_vacc_effective frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion Seasonal Vaccine Effective")
-p7 <- ggplot(trainingDF, aes(opinion_seas_risk)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_seas_risk frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion Seasonal Risk")
-p8 <- ggplot(trainingDF, aes(opinion_seas_sick_from_vacc)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of opinion_seas_sick_from_vacc frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("Opinion Sick From Seasonal Vaccine")
-(p5+p6) / (p7+p8)
-```
-
-
-```{r, fig.align='center'}
-p9 <- ggplot(trainingDF, aes(age_group)) +
-      geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of age_group frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("age_group")
-p10 <- ggplot(trainingDF, aes(education)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of education frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("education")
-p11 <- ggplot(trainingDF, aes(race)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of race frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("race")
-p12 <- ggplot(trainingDF, aes(sex)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of sex frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("sex")
- (p9+p10) / (p11+p12)
-```
-
-
-```{r, fig.align='center'}
-p1 <- ggplot(trainingDF, aes(income_poverty)) +
-      geom_bar(fill="dodgerblue", color="white", alpha=0.5) +
-      ggtitle("Graph of income_poverty frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="dodgerblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("income_poverty")
-p2 <- ggplot(trainingDF, aes(marital_status)) +
-      geom_bar(fill="firebrick2", color="white", alpha=0.5) +
-      ggtitle("Graph of marital status frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="firebrick2", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("marital status")
-p3 <- ggplot(trainingDF, aes(rent_or_own)) +
-      geom_bar(fill="cyan3", color="white", alpha=0.5) +
-      ggtitle("Graph of rent_or_own frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="cyan3", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("rent or own")
-p4 <- ggplot(trainingDF, aes(employment_status)) +
-      geom_bar(fill="gold", color="white", alpha=0.5) +
-      ggtitle("Graph of employment_status frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="gold", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8)) +
-      xlab("employment status")
-(p1 + p2) / (p3 + p4)
-
-```
-
-
-```{r, fig.align='center'}
-p1 <- ggplot(trainingDF, aes(employment_industry)) +
-      geom_bar(fill="lightslateblue", color="white", alpha=0.5) +
-      ggtitle("Graph of employment_industry frequency") +
-      theme(plot.title = element_text(hjust = 0.5, color="lightslateblue", size=10), axis.text = element_text(size=6, color ="gray"), axis.title = element_text(size=8), axis.text.x = element_text(angle = 45, hjust=1)) +
-      xlab("employment industry")
-p1
-```
-
-
-```{r, fig.align='center', fig.width=12, fig.height=6} 
-trainingDF[,2:38] %>%
-   gather(-h1n1_vaccine, key="feature", value="value") %>%
-   ggplot(aes(x=value, fill=h1n1_vaccine)) +
-   geom_bar(alpha=0.85) +
-   facet_wrap(~ feature,scales="free") +
-   theme_classic() +
-   theme(plot.title = element_text(hjust = 0.5, color="black", size=10), axis.text = element_text(size=6, color ="black"), axis.title = element_text(size=10), legend.text = element_text(size=8), legend.title = element_text(size=8), legend.position = "top", strip.text = element_text(size=8)) +
-   xlab("Fig 1. Relationship between features and h1n1 vaccination") +
-   scale_fill_manual(values=c("#fb766d", "#01acb6"))
-ggsave("h1n1_vaccine.png")
-```
 
 Filling in Missingness for Employment Information:
 ```{r}
@@ -515,17 +246,8 @@ trainingDF$employment_industry = as.factor(trainingDF$employment_industry)
 
 
 ```{r}
-#install.packages("VIM")
-#install.packages("naniar")
-#install.packages("missMDA")
-#install.packages("Amelia")
-#install.packages("mice")
-#install.packages("missForest")
-#install.packages("FactoMineR")
-#install.packages("Tidyverse")
-#install.packages("devtools")
 library(devtools)
-#install_github("cran/BaylorEdPsych")      for MCAR testing
+#install_github("cran/BaylorEdPsych")     # for MCAR testing
 library(BaylorEdPsych)
 ```
 
@@ -592,19 +314,24 @@ chisq.test(trainingDF_miss_filled$health_insurance, trainingDF_miss_filled$emplo
 Results show that missingness is not MCAR. It could either be MAR or MNAR. The test also tells us that the missingness can have a significant effect on the outcome.
 
 ```{r}
+png(filename="h1n1_miss.png", width = 480, height = 480, units = "px", pointsize = 12,
+    bg = "white", res = 145)
 ggplot(trainingDF_miss_filled, 
        aes(x = h1n1_vaccine, 
            fill = health_insurance)) + 
   geom_bar(position = "fill") +
-  labs(y = "Proportion") +theme_bw() + title("Health Insurance Missingness Analysis")
+  labs(y = "Proportion") +theme_bw() 
+dev.off()
 ```
 
 ```{r}
+png(filename="h1n1_miss2.png", width = 480, height = 480, units = "px", pointsize = 12,
+    bg = "white", res = 145)
 ggplot(trainingDF_miss_filled, 
        aes(x = h1n1_vaccine, 
            fill = health_insurance)) + 
   geom_bar(position = position_dodge(preserve = "single")) +theme_bw()
-
+dev.off()
 ```
 
 The figure above shows that those with missing health insurance information are less likely to get vaccinated. However, the effect seems to be reverse. That is, those who did not get vaccinated had about the same likelihood of missingness, however, those who did get vaccinated had a much lower chance of (more than 50% less) of having missing data in health insurance. Given that the statistical significance of this trend is exactly same in other variables which have missing data, it seems this also applies to the other variables. Thus, given this trend, it appears the missing data points for the health insurance variable appears to be missing at random, being conditional on covariates, especially with H1N1 vaccination. A similar but much less dramatic effect is seen for seasonal_vaccination as well. Thus, it may have been the case that much focus was placed on H1N1_compliant respondents to ensure they had complete data, but not so much for seasonal vaccination.
@@ -729,6 +456,7 @@ pmiss.rf
 
 Now. let's try imputing by random for all missing data points based on outcome group frequency.
 ```{r}
+library(caTools)
 training.random<-trainingDF
 for (var in names(training.random)){
    set.seed(123)
@@ -739,7 +467,6 @@ for (var in names(training.random)){
       frac3=length(training.random[training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==FALSE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
       frac4=length(training.random[training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==TRUE & training.random[[var]]==FALSE,var])/length(!is.na(training.random[[var]]))
       
-      library(caTools)
       ind1<-which(training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==FALSE&is.na(training.random[[var]]))
       ind2<-which(training.random$seasonal_vaccine==FALSE& training.random$h1n1_vaccine==TRUE&is.na(training.random[[var]]))
       ind3<-which(training.random$seasonal_vaccine==TRUE& training.random$h1n1_vaccine==FALSE&is.na(training.random[[var]]))
