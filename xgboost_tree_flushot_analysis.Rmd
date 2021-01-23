@@ -115,7 +115,7 @@ library(performanceEstimation)
 #prediction for model-based imputation
 rf.train.xg.h1n1 <- as(as.matrix(sapply(X.rf_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
 rf.test.xg.h1n1 <- as(as.matrix(sapply(X.rf_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
-bstSparse_a <- xgboost(data=rf.train.xg.h1n1, label=as.numeric(y.rf_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+bstSparse_a <- xgboost(data=rf.train.xg.h1n1, label=as.numeric(y.rf_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", eval_metric="error",verbose = 0)
 
 xg.pred.rf <- predict(bstSparse_a, rf.test.xg.h1n1)
 classificationMetrics(factor(as.numeric(y.rf_test.h1n1)),as.numeric(xg.pred.rf>0.51))
@@ -124,7 +124,7 @@ classificationMetrics(factor(as.numeric(y.rf_test.h1n1)),as.numeric(xg.pred.rf>0
 #PREDICTION for the complete case scenario
 comp.train.xg.h1n1 <- as(as.matrix(sapply(X.comp_train.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
 comp.test.xg.h1n1 <- as(as.matrix(sapply(X.comp_test.h1n1, function(x) as.numeric(as.factor(x)))), "dgCMatrix")
-bstSparse_b <- xgboost(data=comp.train.xg.h1n1, label=as.numeric(y.comp_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", verbose = 0)
+bstSparse_b <- xgboost(data=comp.train.xg.h1n1, label=as.numeric(y.comp_train.h1n1), max.depth = 2, eta = 1, nthread = 2, nrounds = 20, objective = "binary:logistic", eval_metric="error",verbose = 0)
 
 xg.pred.comp <- predict(bstSparse_b, comp.test.xg.h1n1)
 classificationMetrics(factor(as.numeric(y.comp_test.h1n1)),as.numeric(xg.pred.comp>0.51))
@@ -164,24 +164,24 @@ set.seed(123)
 smp_size <- floor(0.75 * nrow(comp.case.df))
 train_ind <- sample(seq_len(nrow(comp.case.df)), size = smp_size)
 
-X.comp_train <- comp.case.df[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
-X.comp_test <- comp.case.df[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.comp_train <- comp.case.df[train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
+X.comp_test <- comp.case.df[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
 y.comp_train = comp.case.df[train_ind,] %>% subset(., select=c(seasonal_vaccine))
 y.comp_test= comp.case.df[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
 
 smp_size <- floor(0.75 * nrow(unknown.case.df))
 train_ind <- sample(seq_len(nrow(unknown.case.df)), size = smp_size)
 
-X.unkn_train <- unknown.case.df[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
-X.unkn_test <- unknown.case.df[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.unkn_train <- unknown.case.df[train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
+X.unkn_test <- unknown.case.df[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
 y.unkn_train = unknown.case.df[train_ind,] %>% subset(., select=c(seasonal_vaccine))
 y.unkn_test= unknown.case.df[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
 
 smp_size <- floor(0.75 * nrow(mod.imp))
 train_ind <- sample(seq_len(nrow(mod.imp)), size = smp_size)
 
-X.mode_train <- mod.imp[train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
-X.mode_test <- mod.imp[-train_ind, ] %>% subset(., select=-c(seasonal_vaccine))
+X.mode_train <- mod.imp[train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
+X.mode_test <- mod.imp[-train_ind, ] %>% subset(., select=-c(h1n1_vaccine, seasonal_vaccine))
 y.mode_train = mod.imp[train_ind,] %>% subset(., select=c(seasonal_vaccine))
 y.mode_test= mod.imp[-train_ind,] %>% subset(., select=c(seasonal_vaccine))
 
@@ -313,37 +313,6 @@ xgb.plot.importance(importance_matrix = importance_h)
 ```
 
 ```{r}
-png(filename="comp_H1N1_Imp.png", width     = 3.25,
-  height    = 3.25,
-  units     = "in",
-  res       = 1200,
-  pointsize = 4)
-par(
-  mar      = c(5, 5, 2, 2),
-  xaxs     = "i",
-  yaxs     = "i",
-  cex.axis = 2,
-  cex.lab  = 2)
-xgb.plot.importance(importance_matrix = importance_b, top_n = 10)
-dev.off()
-
-png(filename="comp_seasonal_Imp.png", width     = 3.25,
-  height    = 3.25,
-  units     = "in",
-  res       = 1200,
-  pointsize = 4)
-par(
-  mar      = c(5, 5, 2, 2),
-  xaxs     = "i",
-  yaxs     = "i",
-  cex.axis = 2,
-  cex.lab  = 2)
-xgb.plot.importance(importance_matrix = importance_f, top_n = 10)
-dev.off()
-
-```
-
-```{r}
 png(filename="comp_H1N1_Importance.png")
 ggplot(importance_b[1:10,], aes(x = reorder(Feature, Importance), y = Importance))+ 
   geom_bar(stat="identity", fill="#191870") + 
@@ -353,7 +322,7 @@ ggplot(importance_b[1:10,], aes(x = reorder(Feature, Importance), y = Importance
   xlab("variables") +
   ylab("importance") +
   ggtitle("Graph of importance against variables for H1N1 vaccination (XGBoost Tree)") +
-  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=12), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+  theme(plot.title = element_text(hjust = 1.3, size=11, face="bold", color="black"), axis.title = element_text(color="#191870", size=16), axis.text = element_text(color="black", size=11), axis.line = element_line(color="black"))
 dev.off()
 
 png(filename="comp_seasonal_Importance.png")
@@ -365,7 +334,7 @@ ggplot(importance_f[1:10,], aes(x = reorder(Feature, Importance), y = Importance
   xlab("variables") +
   ylab("importance") +
   ggtitle("Graph of importance against variables for Seasonal vaccination (XGBoost Tree)") +
-  theme(plot.title = element_text(hjust = 0.5, size=10, face="bold", color="black"), axis.title = element_text(color="#191870", size=11), axis.text = element_text(color="black"), axis.line = element_line(color="black"))
+  theme(plot.title = element_text(hjust = 1.3, size=11, face="bold", color="black"), axis.title = element_text(color="#191870", size=16), axis.text = element_text(color="black", size=11), axis.line = element_line(color="black"))
 dev.off()
 
 ```
