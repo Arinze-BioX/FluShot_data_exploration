@@ -257,8 +257,6 @@ levels(randImp$health_insurance)[levels(randImp$health_insurance) == "0"] = "Non
 levels(randImp$health_insurance)[levels(randImp$health_insurance) == "1"] = "Present"
 levels(randImp$health_insurance) = c("None","Present","Missing")
 randImp[is.na(randImp$health_insurance),'health_insurance'] <- 'Missing'
-#glimpse(randImp)
-#summary(randImp$health_insurance)
 ```
 
 ## Imputation using most frequent category
@@ -346,63 +344,45 @@ set.seed(123)
 sample <- sample.split(completeCases$h1n1_vaccine,SplitRatio = 0.75)
 cc_train_df <- subset(completeCases,sample == TRUE)
 cc_test_df <- subset(completeCases, sample == FALSE)
-cc_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
+
+cc_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-1]
 cc_complete_hy <- completeCases[,36]
-cc_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
+cc_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-c(1,102)]
 cc_complete_sy <- completeCases[,37]
 summary(cc_complete_sy)
 
 rand_sample <- sample.split(randImp$h1n1_vaccine,SplitRatio = 0.75)
 rand_train_df <- subset(randImp,rand_sample == TRUE)
 rand_test_df <- subset(randImp, rand_sample == FALSE)
-rand_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
-rand_complete_hy <- completeCases[,36]
-rand_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
-rand_complete_sy <- completeCases[,37]
-
-#glimpse(modelImp)
-#modelImp <- sample.split(modelImp$h1n1_vaccine,SplitRatio = 0.75)
-#model_train_df <- subset(modelImp,rand_sample == TRUE)
-#model_test_df <- subset(modelImp, rand_sample == FALSE)
-#model_complete_hx <- model.matrix(h1n1_vaccine~., completeCases)[,-36]
-#model_complete_hy <- completeCases[,36]
-#model_complete_sx <- model.matrix(seasonal_vaccine~., completeCases)[,-37]
-#model_complete_sy <- completeCases[,37]
+rand_complete_hx <- model.matrix(h1n1_vaccine~., randImp)[,-1]
+rand_complete_hy <- randImp[,36]
+rand_complete_sx <- model.matrix(seasonal_vaccine~., randImp)[,-c(1,102)]
+rand_complete_sy <- randImp[,37]
 ```
 
 
 ```{r}
 set.seed(123)
 # Let's split data for Lasso
-cc_train_hx <- model.matrix(h1n1_vaccine~.,cc_train_df)[,-(36:37)]
+cc_train_hx <- model.matrix(h1n1_vaccine~.,cc_train_df)[,-1]
 cc_train_hy = cc_train_df[,36]
-cc_train_sx <- model.matrix(seasonal_vaccine~.,cc_train_df)[,-(36:37)]
+cc_train_sx <- model.matrix(seasonal_vaccine~.,cc_train_df)[,-c(1,102)]
 cc_train_sy = cc_train_df[,37]
 
-cc_test_hx <- model.matrix(h1n1_vaccine~.,cc_test_df)[,-(36:37)]
+cc_test_hx <- model.matrix(h1n1_vaccine~.,cc_test_df)[,-1]
 cc_test_hy = cc_test_df[,36]
-cc_test_sx <- model.matrix(seasonal_vaccine~.,cc_test_df)[,-(36:37)]
+cc_test_sx <- model.matrix(seasonal_vaccine~.,cc_test_df)[,-c(1,102)]
 cc_test_sy = cc_test_df[,37]
 
-rand_train_hx <- model.matrix(h1n1_vaccine~.,rand_train_df)[,-(36:37)]
+rand_train_hx <- model.matrix(h1n1_vaccine~.,rand_train_df)[,-1]
 rand_train_hy = rand_train_df[,36]
-rand_train_sx <- model.matrix(seasonal_vaccine~.,rand_train_df)[,-(36:37)]
+rand_train_sx <- model.matrix(seasonal_vaccine~.,rand_train_df)[,-c(1,102)]
 rand_train_sy = rand_train_df[,37]
 
-rand_test_hx <- model.matrix(h1n1_vaccine~.,rand_test_df)[,-(36:37)]
+rand_test_hx <- model.matrix(h1n1_vaccine~.,rand_test_df)[,-1]
 rand_test_hy = rand_test_df[,36]
-rand_test_sx <- model.matrix(seasonal_vaccine~.,rand_test_df)[,-(36:37)]
+rand_test_sx <- model.matrix(seasonal_vaccine~.,rand_test_df)[,-c(1,102)]
 rand_test_sy = rand_test_df[,37]
-
-#model_train_hx <- model.matrix(h1n1_vaccine~.,model_train_df)[,-(36:37)]
-#model_train_hy = model_train_df[,36]
-#model_train_sx <- model.matrix(seasonal_vaccine~.,model_train_df)[,-(36:37)]
-#model_train_sy = model_train_df[,37]
-
-#model_test_hx <- model.matrix(h1n1_vaccine~.,model_test_df)[,-(36:37)]
-#model_test_hy = model_test_df[,36]
-#model_test_sx <- model.matrix(seasonal_vaccine~.,model_test_df)[,-(36:37)]
-#model_test_sy = model_test_df[,37]
 
 #balancing the trees 
 cc_train_bh <- ubUnder(cc_train_hx, cc_train_hy, perc=50, method="percPos", w=NULL)
@@ -428,9 +408,6 @@ cc_lassoModel_sx <- glmnet(cc_train_bs$X, cc_train_bs$Y, alpha = 1, lambda = lam
 
 rand_lassoModel_hx <- glmnet(rand_train_bh$X, rand_train_bh$Y, alpha = 1, lambda = lambdaArray)
 rand_lassoModel_sx <- glmnet(rand_train_bs$X, rand_train_bs$Y, alpha = 1, lambda = lambdaArray)
-
-#model_lassoModel_hx <- glmnet(model_train_hx, model_train_hy, alpha = 1, lambda = lambdaArray)
-#model_lassoModel_sx <- glmnet(model_train_sx, model_train_sy, alpha = 1, lambda = lambdaArray)
 ```
 
 ## get minimums
@@ -441,9 +418,6 @@ cc_sx <- cv.glmnet(cc_train_sx,cc_train_sy, alpha=1)
 
 rand_hx <- cv.glmnet(rand_train_hx,rand_train_hy, alpha=1)
 rand_sx <- cv.glmnet(rand_train_sx,rand_train_hy, alpha=1)
-
-#model_hx <- cv.glmnet(cc_train_hx,cc_train_hy, alpha=1)
-#model_sx <- cv.glmnet(model_train_sx,model_train_sy, alpha=1)
 ```
 
 ## predictions 
@@ -500,11 +474,6 @@ rand_s_labels$logicalPred = as.factor(rand_s_labels$logicalPred)
 summary(rand_s_labels)
 confusionMatrix(rand_s_labels$logicalPred,rand_s_labels$actual)
 print("-------------------------------------------------------------------------------------------------")
-
-#model_hx_pred <- predict(model_lassoModel_hx, s=model_hx$lambda.min, newx = model_test_hx)
-#mean((model_hx_pred - model_test_hy)^2) #mean squared error (MSE)
-#model_sx_pred <- predict(model_lassoModel_sx, s=model_sx$lambda.min, newx = model_test_sx)
-#mean((model_sx_pred - model_test_sy)^2) #mean squared error (MSE)
 ```
 
 ```{r}
@@ -512,7 +481,6 @@ set.seed(123)
 print("---------------------------------------Complete Case H1N1------------------------------------------")
 pred <- ROCR::prediction(sigmoid(cc_hx_pred), cc_test_df$h1n1_vaccine, label.ordering = NULL)
 perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
-#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(cc_test_df$h1n1_vaccine,pred=sigmoid(cc_hx_pred))
@@ -526,7 +494,6 @@ set.seed(123)
 print("--------------------------------------Complete Case Seasonal Flu-----------------------------------")
 pred <- ROCR::prediction(pred=sigmoid(cc_sx_pred), cc_test_df$seasonal_vaccine, label.ordering = NULL)
 perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
-#perf <- performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(cc_test_df$seasonal_vaccine,pred=sigmoid(cc_hx_pred))
@@ -540,7 +507,6 @@ set.seed(123)
 print("----------------------------------------Mod H1N1---------------------------------------------------")
 pred <- ROCR::prediction(pred=sigmoid(rand_hx_pred), rand_test_df$h1n1_vaccine, label.ordering = NULL)
 perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
-#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(rand_test_df$h1n1_vaccine,pred=sigmoid(rand_hx_pred))
@@ -554,7 +520,6 @@ set.seed(123)
 print("----------------------------------------Mod Seasonal Flu-----------------------------------------")
 pred <- ROCR::prediction(pred=sigmoid(rand_sx_pred), rand_test_df$seasonal_vaccine, label.ordering = NULL)
 perf <- ROCR::performance(pred, measure = "tpr", x.measure = "fpr")
-#perf <- ROCR::performance(pred,"tpr","fpr")
 plot(perf, main="Receiver Operating Characteristic (ROC) Curve")
 segments(x0=0, y0=0, x1=1, y1=1, col="gray", lty=2)
 area <- auc(rand_test_df$seasonal_vaccine,pred=sigmoid(rand_sx_pred))
@@ -646,8 +611,8 @@ no_occu_rsdf <- dplyr::filter(no_hhs_rsdf, !grepl("employment_occupation",variab
 no_occu_rsdf$variables = reorder(no_occu_rsdf$variables,no_occu_rsdf$importance)
 edited_rsdf <- no_occu_rsdf[0:20,]
 
-ggplot(edited_rsdf, aes(x=variables, y=-og)) +
-  geom_bar(stat="identity", fill=ifelse(edited_rsdf$og > 0, "#dd5b56", "#191870")) + #previously 191870
+ggplot(edited_rsdf, aes(x=variables, y=og)) +
+  geom_bar(stat="identity", fill=ifelse(edited_rsdf$og < 0, "#dd5b56", "#191870")) + #previously 191870
   theme_classic() +
   coord_flip() +
   geom_hline(yintercept=0, color="#191870") +
